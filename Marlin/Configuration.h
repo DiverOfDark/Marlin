@@ -1409,10 +1409,9 @@
  */
 #define DISPLAY_CHARSET_HD44780 CYRILLIC
 
-/**
-#define DISPLAY_CHARSET_HD44780 JAPANESE
+//#define DISPLAY_CHARSET_HD44780 JAPANESE
 
-/**
+/*
  * SD CARD
  *
  * SD Card support is disabled by default. If your controller has an SD slot,
