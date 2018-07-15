@@ -525,7 +525,7 @@
 #define STATUS_MESSAGE_SCROLLING
 
 // On the Info Screen, display XY with one decimal place when possible
-//#define LCD_DECIMAL_SMALL_XY
+#define LCD_DECIMAL_SMALL_XY
 
 // The timeout (in ms) to return to the status screen from sub-menus
 //#define LCD_TIMEOUT_TO_STATUS 15000
@@ -814,12 +814,12 @@
 #if ENABLED(ARC_SUPPORT)
   #define MM_PER_ARC_SEGMENT  1   // Length of each arc segment
   #define N_ARC_CORRECTION   25   // Number of intertpolated segments between corrections
-  //#define ARC_P_CIRCLES         // Enable the 'P' parameter to specify complete circles
+  #define ARC_P_CIRCLES         // Enable the 'P' parameter to specify complete circles
   //#define CNC_WORKSPACE_PLANES  // Allow G2/G3 to operate in XY, ZX, or YZ planes
 #endif
 
 // Support for G5 with XYZE destination and IJPQ offsets. Requires ~2666 bytes.
-//#define BEZIER_CURVE_SUPPORT
+#define BEZIER_CURVE_SUPPORT
 
 // G38.2 and G38.3 Probe Target
 // Set MULTIPLE_PROBING if you want G38 to double touch
@@ -898,18 +898,18 @@
 // For debug-echo: 128 bytes for the optimal speed.
 // Other output doesn't need to be that speedy.
 // :[0, 2, 4, 8, 16, 32, 64, 128, 256]
-#define TX_BUFFER_SIZE 0
+#define TX_BUFFER_SIZE 256
 
 // Host Receive Buffer Size
 // Without XON/XOFF flow control (see SERIAL_XON_XOFF below) 32 bytes should be enough.
 // To use flow control, set this buffer size to at least 1024 bytes.
 // :[0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
-//#define RX_BUFFER_SIZE 1024
+#define RX_BUFFER_SIZE 4096
 
 #if RX_BUFFER_SIZE >= 1024
   // Enable to have the controller send XON/XOFF control characters to
   // the host to signal the RX buffer is becoming full.
-  //#define SERIAL_XON_XOFF
+  #define SERIAL_XON_XOFF
 #endif
 
 #if ENABLED(SDSUPPORT)
@@ -1215,7 +1215,7 @@
    * M912 - Clear stepper driver overtemperature pre-warn condition flag.
    * M122 S0/1 - Report driver parameters (Requires TMC_DEBUG)
    */
-  //#define MONITOR_DRIVER_STATUS
+  #define MONITOR_DRIVER_STATUS
 
   #if ENABLED(MONITOR_DRIVER_STATUS)
     #define CURRENT_STEP_DOWN     50  // [mA]
@@ -1420,10 +1420,10 @@
  *
  * See http://marlinfw.org/docs/configuration/laser_spindle.html for more config details.
  */
-// #define SPINDLE_LASER_ENABLE
+#define SPINDLE_LASER_ENABLE
 #if ENABLED(SPINDLE_LASER_ENABLE)
 
-  #define SPINDLE_LASER_ENABLE_INVERT   false  // set to "true" if the on/off function is reversed
+  #define SPINDLE_LASER_ENABLE_INVERT   true  // set to "true" if the on/off function is reversed
   #define SPINDLE_LASER_PWM             true   // set to true if your controller supports setting the speed/power
   #define SPINDLE_LASER_PWM_INVERT      false   // set to "true" if the speed/power goes up when you want it to go slower
   #define SPINDLE_LASER_POWERUP_DELAY   1   // delay in milliseconds to allow the spindle/laser to come up to speed/power
@@ -1446,10 +1446,10 @@
   //#define SPEED_POWER_MIN     5000
   //#define SPEED_POWER_MAX    30000    // SuperPID router controller 0 - 30,000 RPM
 
-  #define SPEED_POWER_SLOPE      0.3922
+  #define SPEED_POWER_SLOPE      1      // 5V / 12V
   #define SPEED_POWER_INTERCEPT  0
   #define SPEED_POWER_MIN        0
-  #define SPEED_POWER_MAX      100      // 0-100%
+  #define SPEED_POWER_MAX      255      
 #endif
 
 /**

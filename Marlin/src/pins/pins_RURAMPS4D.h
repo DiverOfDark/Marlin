@@ -47,7 +47,9 @@
 #define X_MAX_PIN          39
 #define Y_MIN_PIN          46
 #define Y_MAX_PIN          41
-#define Z_MIN_PIN          47
+
+//#define Z_MIN_PIN          47 // ORIGINAL PIN ON BOARD
+#define Z_MIN_PIN          49   // OVERRIDE FOR HACK USING Z_PROBE AS Z_MIN
 #define Z_MAX_PIN          43
 
 //
@@ -109,7 +111,7 @@
 
 #if ENABLED(FILAMENT_RUNOUT_SENSOR)
   #ifndef FIL_RUNOUT_PIN
-    #define FIL_RUNOUT_PIN   Y_MIN_PIN
+    #define FIL_RUNOUT_PIN   X_MAX_PIN
   #endif
 #endif
 
@@ -117,8 +119,8 @@
 // Heaters / Fans
 //
 #define HEATER_0_PIN       13
-#define HEATER_1_PIN       12
-#define HEATER_2_PIN       11
+#define HEATER_1_PIN       -1 // 12
+#define HEATER_2_PIN       -1 // 11
 #define HEATER_BED_PIN      7  // BED H1
 
 #define FAN_PIN             9
@@ -184,6 +186,12 @@
 //#define SPI_EEPROM2_CS          ?
 // 32Mb FLASH
 //#define SPI_FLASH_CS            ?
+
+// LASER
+
+#define SPINDLE_LASER_ENABLE_PIN  11   // Pin should have a pullup/pulldown!
+#define SPINDLE_LASER_PWM_PIN     12   // MUST BE HARDWARE PWM
+
 
 //
 // LCD / Controller
