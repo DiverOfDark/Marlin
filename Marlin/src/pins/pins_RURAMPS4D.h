@@ -111,7 +111,7 @@
 
 #if ENABLED(FILAMENT_RUNOUT_SENSOR)
   #ifndef FIL_RUNOUT_PIN
-    #define FIL_RUNOUT_PIN   X_MAX_PIN
+    #define FIL_RUNOUT_PIN   39
   #endif
 #endif
 
