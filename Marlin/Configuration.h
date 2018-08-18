@@ -127,6 +127,8 @@
  */
 #define BAUDRATE 250000
 
+#define FLASH_AIR_WIFI
+
 // Enable the Bluetooth serial interface on AT90USB devices
 //#define BLUETOOTH
 

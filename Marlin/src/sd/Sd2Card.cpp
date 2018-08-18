@@ -477,9 +477,15 @@ bool Sd2Card::readData(uint8_t* dst, uint16_t count) {
   spiRec();
 #endif
   chipDeselect();
+  #ifdef FLASH_AIR_WIFI
+    spiSend(0xFF);
+  #endif
   return true;
   FAIL:
   chipDeselect();
+  #ifdef FLASH_AIR_WIFI
+    spiSend(0xFF);
+  #endif
   return false;
 }
 
