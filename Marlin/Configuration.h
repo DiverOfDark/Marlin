@@ -136,7 +136,7 @@
 // Please choose the name from boards.h that matches your setup
 #ifndef MOTHERBOARD
   // #define MOTHERBOARD BOARD_RAMPS_14_EFB
-  #define MOTHERBOARD BOARD_RURAMPS4D
+  #define MOTHERBOARD BOARD_RURAMPS4D_11
 #endif
 
 // Optional custom name for your RepStrap or other custom machine
@@ -629,14 +629,15 @@
  * Override with M92
  *                                      X, Y, Z, E0 [, E1[, E2[, E3[, E4]]]]
  */
-#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 4000, 100 }
+// #define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 4000, 100 } // 16
+#define DEFAULT_AXIS_STEPS_PER_UNIT   { 1280, 1280, 64000, 1600 } // 256
 
 /**
  * Default Max Feed Rate (mm/s)
  * Override with M203
  *                                      X, Y, Z, E0 [, E1[, E2[, E3[, E4]]]]
  */
-#define DEFAULT_MAX_FEEDRATE          { 400, 400, 2, 100 }
+#define DEFAULT_MAX_FEEDRATE          { 400, 400, 4, 100 }
 
 /**
  * Default Max Acceleration (change/s) change = mm/s
