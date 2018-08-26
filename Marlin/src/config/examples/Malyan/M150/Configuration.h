@@ -92,7 +92,7 @@
  * by the standard Marlin logo with version number and web URL.
  *
  * We encourage you to take advantage of this new feature and we also
- * respecfully request that you retain the unmodified Marlin boot screen.
+ * respectfully request that you retain the unmodified Marlin boot screen.
  */
 
 // Enable to show the bitmap in Marlin/_Bootscreen.h on startup.
@@ -176,8 +176,8 @@
   // Override the default DIO selector pins here, if needed.
   // Some pins files may provide defaults for these pins.
   //#define E_MUX0_PIN 40  // Always Required
-  //#define E_MUX1_PIN 42  // Needed for 3 to 8 steppers
-  //#define E_MUX2_PIN 44  // Needed for 5 to 8 steppers
+  //#define E_MUX1_PIN 42  // Needed for 3 to 8 inputs
+  //#define E_MUX2_PIN 44  // Needed for 5 to 8 inputs
 #endif
 
 // A dual extruder that uses a single stepper motor
@@ -195,7 +195,6 @@
 #if ENABLED(SWITCHING_NOZZLE)
   #define SWITCHING_NOZZLE_SERVO_NR 0
   #define SWITCHING_NOZZLE_SERVO_ANGLES { 0, 90 }   // Angles for E0, E1
-  //#define HOTEND_OFFSET_Z { 0.0, 0.0 }
 #endif
 
 /**
@@ -210,7 +209,6 @@
   #define PARKING_EXTRUDER_PARKING_X { -78, 184 }     // X positions for parking the extruders
   #define PARKING_EXTRUDER_GRAB_DISTANCE 1            // mm to move beyond the parking point to grab the extruder
   #define PARKING_EXTRUDER_SECURITY_RAISE 5           // Z-raise before parking
-  #define HOTEND_OFFSET_Z { 0.0, 1.3 }                // Z-offsets of the two hotends. The first must be 0.
 #endif
 
 /**
@@ -231,8 +229,9 @@
 // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).
 // The offset has to be X=0, Y=0 for the extruder 0 hotend (default extruder).
 // For the other hotends it is their distance from the extruder 0 hotend.
-//#define HOTEND_OFFSET_X {0.0, 20.00} // (in mm) for each extruder, offset of the hotend on the X axis
-//#define HOTEND_OFFSET_Y {0.0, 5.00}  // (in mm) for each extruder, offset of the hotend on the Y axis
+//#define HOTEND_OFFSET_X {0.0, 20.00} // (mm) relative X-offset for each nozzle
+//#define HOTEND_OFFSET_Y {0.0, 5.00}  // (mm) relative Y-offset for each nozzle
+//#define HOTEND_OFFSET_Z {0.0, 0.00}  // (mm) relative Z-offset for each nozzle
 
 // @section machine
 
@@ -719,6 +718,7 @@
  * or (with LCD_BED_LEVELING) the LCD controller.
  */
 //#define PROBE_MANUALLY
+//#define MANUAL_PROBE_START_Z 0.2
 
 /**
  * A Fix-Mounted Probe either doesn't deploy or needs manual deployment.
@@ -825,6 +825,7 @@
  */
 //#define Z_CLEARANCE_DEPLOY_PROBE   10 // Z Clearance for Deploy/Stow
 //#define Z_CLEARANCE_BETWEEN_PROBES  5 // Z Clearance between probe points
+#define Z_CLEARANCE_MULTI_PROBE     5 // Z Clearance between multiple probes
 //#define Z_AFTER_PROBING           5 // Z position after probing is done
 
 #define Z_PROBE_LOW_POINT          -2 // Farthest distance below the trigger-point to go before stopping
@@ -1806,7 +1807,6 @@
 
 //
 // LCD for Malyan M200 printers.
-// This requires SDSUPPORT to be enabled
 //
 //#define MALYAN_LCD
 
@@ -1883,7 +1883,7 @@
  * For Neopixel LED an overall brightness parameter is also available.
  *
  * *** CAUTION ***
- *  LED Strips require a MOFSET Chip between PWM lines and LEDs,
+ *  LED Strips require a MOSFET Chip between PWM lines and LEDs,
  *  as the Arduino cannot handle the current the LEDs will require.
  *  Failure to follow this precaution can destroy your Arduino!
  *  NOTE: A separate 5V power supply is required! The Neopixel LED needs

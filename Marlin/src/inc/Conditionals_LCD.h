@@ -202,6 +202,18 @@
 #endif
 
 /**
+ * SPI PANELS
+ */
+
+ // Einstart OLED has Cardinal nav via pins defined in pins_EINSTART-S.h
+ #if ENABLED(U8GLIB_SH1106_EINSTART)
+   #define ULTRA_LCD
+   #define DOGLCD
+   #define ULTIPANEL
+   #define NEWPANEL
+ #endif
+
+/**
  * I2C PANELS
  */
 
@@ -446,6 +458,8 @@
 
 #define DO_SWITCH_EXTRUDER (ENABLED(SWITCHING_EXTRUDER) && (DISABLED(SWITCHING_NOZZLE) || SWITCHING_EXTRUDER_SERVO_NR != SWITCHING_NOZZLE_SERVO_NR))
 
+#define HAS_HOTEND_OFFSET (HOTENDS > 1)
+
 /**
  * DISTINCT_E_FACTORS affects how some E factors are accessed
  */
@@ -508,7 +522,7 @@
  * Set flags for enabled probes
  */
 #define HAS_BED_PROBE (ENABLED(FIX_MOUNTED_PROBE) || ENABLED(Z_PROBE_ALLEN_KEY) || HAS_Z_SERVO_PROBE || ENABLED(Z_PROBE_SLED) || ENABLED(SOLENOID_PROBE))
-#define PROBE_SELECTED (HAS_BED_PROBE || ENABLED(PROBE_MANUALLY))
+#define PROBE_SELECTED (HAS_BED_PROBE || ENABLED(PROBE_MANUALLY) || ENABLED(MESH_BED_LEVELING))
 
 #if !HAS_BED_PROBE
   // Clear probe pin settings when no probe is selected
