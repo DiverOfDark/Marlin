@@ -458,7 +458,7 @@
 #define ADAPTIVE_STEP_SMOOTHING
 
 // Microstep setting (Only functional when stepper driver microstep pins are connected to MCU.
-#define MICROSTEP_MODES {16,16,16,16,16} // [1,2,4,8,16]
+#define MICROSTEP_MODES {256,256,256,256,256} // [1,2,4,8,16]
 
 /**
  *  @section  stepper motor current
@@ -841,7 +841,7 @@
  * 1500 : Minimum for TB6600 drivers (guess, no info in datasheet)
  *15000 : Minimum for TB6560 drivers (guess, no info in datasheet)
  */
-#define MINIMUM_STEPPER_DIR_DELAY 200
+#define MINIMUM_STEPPER_DIR_DELAY 20
 
 /**
  * Minimum stepper driver pulse width (in µs)
@@ -852,7 +852,7 @@
  *   3 : Minimum for TB6600 stepper drivers
  *  30 : Minimum for TB6560 stepper drivers
  */
-#define MINIMUM_STEPPER_PULSE 1
+#define MINIMUM_STEPPER_PULSE 0
 
 /**
  * Maximum stepping rate (in Hz) the stepper driver allows
@@ -864,7 +864,7 @@
  *  130000 : Maximum for LV8729 stepper driver
  *   15000 : Maximum for TB6560 stepper driver
  */
-#define MAXIMUM_STEPPER_RATE 500000
+#define MAXIMUM_STEPPER_RATE 400000
 
 // @section temperature
 
@@ -1109,15 +1109,15 @@
  * in your `pins_MYBOARD.h` file. (e.g., RAMPS 1.4 uses AUX3 pins `X_CS_PIN 53`, `Y_CS_PIN 49`, etc.).
  * You may also use software SPI if you wish to use general purpose IO pins.
  */
-//#define HAVE_TMC2130
+#define HAVE_TMC2130
 #if ENABLED(HAVE_TMC2130)  // Choose your axes here. This is mandatory!
-  //#define X_IS_TMC2130
+  #define X_IS_TMC2130
   //#define X2_IS_TMC2130
-  //#define Y_IS_TMC2130
+  #define Y_IS_TMC2130
   //#define Y2_IS_TMC2130
-  //#define Z_IS_TMC2130
+  #define Z_IS_TMC2130
   //#define Z2_IS_TMC2130
-  //#define E0_IS_TMC2130
+  #define E0_IS_TMC2130
   //#define E1_IS_TMC2130
   //#define E2_IS_TMC2130
   //#define E3_IS_TMC2130
@@ -1156,13 +1156,13 @@
   #define INTERPOLATE       true  // Interpolate X/Y/Z_MICROSTEPS to 256
 
   #define X_CURRENT          800  // rms current in mA. Multiply by 1.41 for peak current.
-  #define X_MICROSTEPS        16  // 0..256
+  #define X_MICROSTEPS        256  // 0..256
 
   #define Y_CURRENT          800
-  #define Y_MICROSTEPS        16
+  #define Y_MICROSTEPS        256
 
   #define Z_CURRENT          800
-  #define Z_MICROSTEPS        16
+  #define Z_MICROSTEPS        256
 
   #define X2_CURRENT         800
   #define X2_MICROSTEPS       16
@@ -1174,7 +1174,7 @@
   #define Z2_MICROSTEPS       16
 
   #define E0_CURRENT         800
-  #define E0_MICROSTEPS       16
+  #define E0_MICROSTEPS       256
 
   #define E1_CURRENT         800
   #define E1_MICROSTEPS       16
@@ -1267,7 +1267,7 @@
    * Enable M122 debugging command for TMC stepper drivers.
    * M122 S0/1 will enable continous reporting.
    */
-  //#define TMC_DEBUG
+  #define TMC_DEBUG
 
   /**
    * M915 Z Axis Calibration
@@ -1482,7 +1482,7 @@
   #define DEFAULT_MEASURED_FILAMENT_DIA DEFAULT_NOMINAL_FILAMENT_DIA // Set measured to nominal initially
 
   // Display filament width on the LCD status line. Status messages will expire after 5 seconds.
-  //#define FILAMENT_LCD_DISPLAY
+  #define FILAMENT_LCD_DISPLAY
 #endif
 
 /**
