@@ -1217,6 +1217,9 @@
 // Validate that endstops are triggered on homing moves
 #define VALIDATE_HOMING_ENDSTOPS
 
+// Validate that endstops are triggered on homing moves
+#define VALIDATE_HOMING_ENDSTOPS
+
 // @section calibrate
 
 /**

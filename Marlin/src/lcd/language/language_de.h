@@ -160,6 +160,8 @@
 #define MSG_LOAD_EEPROM                     _UxGT("Konfig. laden")
 #define MSG_RESTORE_FAILSAFE                _UxGT("Standardwerte laden")
 #define MSG_INIT_EEPROM                     _UxGT("Werkseinstellungen")
+#define MSG_SD_UPDATE                       _UxGT("SD Update")
+#define MSG_RESET_PRINTER                   _UxGT("Drucker neustarten")
 #define MSG_REFRESH                         _UxGT("Aktualisieren")
 #define MSG_WATCH                           _UxGT("Info")
 #define MSG_PREPARE                         _UxGT("Vorbereitung")
@@ -198,6 +200,8 @@
 #define MSG_BLTOUCH_RESET                   _UxGT("BLTouch Reset")
 #define MSG_BLTOUCH_DEPLOY                  _UxGT("BLTouch ausfahren")
 #define MSG_BLTOUCH_STOW                    _UxGT("BLTouch einfahren")
+#define MSG_MANUAL_DEPLOY                   _UxGT("Z-Sensor anbringen")
+#define MSG_MANUAL_STOW                     _UxGT("Z-Sensor entfernen")
 #define MSG_HOME                            _UxGT("Vorher")  // Used as MSG_HOME " " MSG_X MSG_Y MSG_Z " " MSG_FIRST
 #define MSG_FIRST                           _UxGT("homen")
 #define MSG_ZPROBE_ZOFFSET                  _UxGT("Z Versatz")
