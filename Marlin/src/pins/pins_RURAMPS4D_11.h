@@ -55,7 +55,7 @@
 #define Y_MAX_PIN          41
 
 //#define Z_MIN_PIN          47 // ORIGINAL PIN ON BOARD
-#define Z_MIN_PIN          49   // OVERRIDE FOR HACK USING Z_PROBE AS Z_MIN
+#define Z_MIN_PIN          47   // OVERRIDE FOR HACK USING Z_PROBE AS Z_MIN
 #define Z_MAX_PIN          43
 
 //

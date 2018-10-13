@@ -1559,7 +1559,12 @@
 /**
  * M43 - display pin status, watch pins for changes, watch endstops & toggle LED, Z servo probe test, toggle pins
  */
-//#define PINS_DEBUGGING
+#define PINS_DEBUGGING
+
+/**
+ * Allows to debug EEPROM size mismatch.
+ */
+#define DEBUG_EEPROM_READWRITE
 
 /**
  * Auto-report temperatures with M155 S<seconds>
