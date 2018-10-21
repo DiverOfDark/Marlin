@@ -403,7 +403,7 @@
 // Homing hits each endstop, retracts by these distances, then does a slower bump.
 #define X_HOME_BUMP_MM 5
 #define Y_HOME_BUMP_MM 5
-#define Z_HOME_BUMP_MM 2
+#define Z_HOME_BUMP_MM 0
 #define HOMING_BUMP_DIVISOR { 2, 2, 4 }  // Re-Bump Speed Divisor (Divides the Homing Feedrate)
 #define QUICK_HOME                     // If homing includes X and Y, do a diagonal move initially
 
@@ -920,7 +920,7 @@
  *
  * Override the default value based on the driver type set in Configuration.h.
  */
-//#define MINIMUM_STEPPER_DIR_DELAY 650
+#define MINIMUM_STEPPER_DIR_DELAY 200
 
 /**
  * Minimum stepper driver pulse width (in µs)
@@ -946,7 +946,7 @@
  *
  * Override the default value based on the driver type set in Configuration.h.
  */
-//#define MAXIMUM_STEPPER_RATE 250000
+#define MAXIMUM_STEPPER_RATE 400000
 
 // @section temperature
 
@@ -1214,7 +1214,7 @@
   #define Y_MICROSTEPS        32
 
   #define Z_CURRENT          800
-  #define Z_MICROSTEPS        32
+  #define Z_MICROSTEPS        16
 
   #define X2_CURRENT         800
   #define X2_MICROSTEPS       16
@@ -1347,7 +1347,7 @@
    * Use M915 Snn to specify the current.
    * Use M925 Znn to add extra Z height to Z_MAX_POS.
    */
-  #define TMC_Z_CALIBRATION
+  // #define TMC_Z_CALIBRATION
   #if ENABLED(TMC_Z_CALIBRATION)
     #define CALIBRATION_CURRENT 250
     #define CALIBRATION_EXTRA_HEIGHT 10
