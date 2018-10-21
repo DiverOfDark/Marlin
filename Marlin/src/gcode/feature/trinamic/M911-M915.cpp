@@ -378,7 +378,9 @@
 
     SERIAL_ECHOPAIR("\nCalibration current: Z", _rms);
 
+#if ENABLED(MIN_SOFTWARE_ENDSTOPS) || ENABLED(MAX_SOFTWARE_ENDSTOPS)
     soft_endstops_enabled = false;
+#endif
 
     do_blocking_move_to_z(Z_MAX_POS+_z);
 
@@ -393,7 +395,10 @@
     #endif
 
     do_blocking_move_to_z(Z_MAX_POS);
+
+#if ENABLED(MIN_SOFTWARE_ENDSTOPS) || ENABLED(MAX_SOFTWARE_ENDSTOPS)
     soft_endstops_enabled = true;
+#endif
 
     SERIAL_ECHOLNPGM("\nHoming Z because we lost steps");
     enqueue_and_echo_commands_P(PSTR("G28 Z"));
