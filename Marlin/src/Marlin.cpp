@@ -227,10 +227,27 @@ void setup_powerhold() {
   #if HAS_SUICIDE
     OUT_WRITE(SUICIDE_PIN, HIGH);
   #endif
+
+  #if HAS_POWER_SWITCH
+    #if !ENABLED(PS_DEFAULT_OFF)
+      PSU_OFF();
+      safe_delay(500);
+    #endif
+  #endif
+
+  lcd_init();
+  lcd_reset_status();
+  lcd_bootscreen();
+
   #if HAS_POWER_SWITCH
     #if ENABLED(PS_DEFAULT_OFF)
       PSU_OFF();
     #else
+      safe_delay(1000);
+      PSU_ON();
+      safe_delay(1000);
+      PSU_OFF();
+      safe_delay(1000);
       PSU_ON();
     #endif
   #endif
@@ -908,9 +925,6 @@ void setup() {
   #if HAS_FANMUX
     fanmux_init();
   #endif
-
-  lcd_init();
-  lcd_reset_status();
 
   #if ENABLED(SHOW_BOOTSCREEN)
     lcd_bootscreen();
