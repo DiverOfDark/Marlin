@@ -83,16 +83,15 @@
 #define Z_ENABLE_PIN       31
 #define Z_CS_PIN           10
 
-// Switch E0&E1
-#define E1_STEP_PIN        29
-#define E1_DIR_PIN         28
-#define E1_ENABLE_PIN      33
-#define E1_CS_PIN          14
+#define E0_STEP_PIN        29
+#define E0_DIR_PIN         28
+#define E0_ENABLE_PIN      33
+#define E0_CS_PIN          14
 
-#define E0_STEP_PIN        22
-#define E0_DIR_PIN         24
-#define E0_ENABLE_PIN      26
-#define E0_CS_PIN          15
+#define E1_STEP_PIN        22
+#define E1_DIR_PIN         24
+#define E1_ENABLE_PIN      26
+#define E1_CS_PIN          15
 
 #define E2_STEP_PIN        25
 #define E2_DIR_PIN         23
@@ -189,7 +188,7 @@
 // LASER
 
 #define SPINDLE_LASER_ENABLE_PIN  11   // Pin should have a pullup/pulldown!
-#define SPINDLE_LASER_PWM_PIN     12   // MUST BE HARDWARE PWM
+#define SPINDLE_LASER_PWM_PIN     3   // MUST BE HARDWARE PWM
 
 
 //
