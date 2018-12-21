@@ -59,10 +59,18 @@
  */
 
 // Wait for spindle to come up to speed
-inline void delay_for_power_up() { gcode.dwell(SPINDLE_LASER_POWERUP_DELAY); }
+inline void delay_for_power_up() { 
+  #if SPINDLE_LASER_POWERUP_DELAY
+    gcode.dwell(SPINDLE_LASER_POWERUP_DELAY); 
+  #endif
+}
 
 // Wait for spindle to stop turning
-inline void delay_for_power_down() { gcode.dwell(SPINDLE_LASER_POWERDOWN_DELAY); }
+inline void delay_for_power_down() { 
+  #if SPINDLE_LASER_POWERDOWN_DELAY
+  gcode.dwell(SPINDLE_LASER_POWERDOWN_DELAY); 
+  #endif
+}
 
 /**
  * ocr_val_mode() is used for debugging and to get the points needed to compute the RPM vs ocr_val line
@@ -101,23 +109,16 @@ void GcodeSuite::M3_M4(bool is_M3) {
     if (parser.seen('O')) ocr_val_mode();
     else {
       float spindle_laser_power = parser.floatval('S');
-      if (spindle_laser_power == 0) {
-        WRITE(SPINDLE_LASER_ENABLE_PIN, !SPINDLE_LASER_ENABLE_INVERT);                                    // turn spindle off (active low)
-        analogWrite(SPINDLE_LASER_PWM_PIN, SPINDLE_LASER_PWM_INVERT ? 255 : 0);                           // only write low byte
-        delay_for_power_down();
-      }
-      else {
-        spindle_laser_power = (spindle_laser_power <= SPEED_POWER_MIN) ? SPEED_POWER_MIN : spindle_laser_power;
-        spindle_laser_power = (spindle_laser_power >= SPEED_POWER_MAX) ? SPEED_POWER_MAX : spindle_laser_power;
+      spindle_laser_power = (spindle_laser_power <= SPEED_POWER_MIN) ? SPEED_POWER_MIN : spindle_laser_power;
+      spindle_laser_power = (spindle_laser_power >= SPEED_POWER_MAX) ? SPEED_POWER_MAX : spindle_laser_power;
 
-        int16_t ocr_val = (spindle_laser_power - SPEED_POWER_INTERCEPT) * (1.0f / (SPEED_POWER_SLOPE));  // convert RPM to PWM duty cycle
+      int16_t ocr_val = (spindle_laser_power - SPEED_POWER_INTERCEPT) * (1.0f / (SPEED_POWER_SLOPE));  // convert RPM to PWM duty cycle
 
-        NOMORE(ocr_val, 255);                                                                             // limit to max the Atmel PWM will support
-        if (SPINDLE_LASER_PWM_INVERT) ocr_val = 255 - ocr_val;
-        WRITE(SPINDLE_LASER_ENABLE_PIN, SPINDLE_LASER_ENABLE_INVERT);                                     // turn spindle on (active low)
-        analogWrite(SPINDLE_LASER_PWM_PIN, ocr_val & 0xFF);                                               // only write low byte
-        delay_for_power_up();
-      }
+      NOMORE(ocr_val, 255);                                                                             // limit to max the Atmel PWM will support
+      if (SPINDLE_LASER_PWM_INVERT) ocr_val = 255 - ocr_val;
+      WRITE(SPINDLE_LASER_ENABLE_PIN, SPINDLE_LASER_ENABLE_INVERT);                                     // turn spindle on (active low)
+      analogWrite(SPINDLE_LASER_PWM_PIN, ocr_val & 0xFF);                                               // only write low byte
+      delay_for_power_up();
     }
   #else
     WRITE(SPINDLE_LASER_ENABLE_PIN, SPINDLE_LASER_ENABLE_INVERT); // turn spindle on (active low) if spindle speed option not enabled
