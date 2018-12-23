@@ -224,9 +224,9 @@ void setup_powerhold() {
     #endif
   #endif
 
-  lcd_init();
-  lcd_reset_status();
-  lcd_bootscreen();
+  ui.init_lcd();
+  ui.reset_status();
+  ui.show_bootscreen();
 
   #if HAS_POWER_SWITCH
     #if ENABLED(PS_DEFAULT_OFF)

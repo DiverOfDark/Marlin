@@ -128,7 +128,7 @@
 #define HEATER_BED_PIN      7  // BED H1
 
 #define FAN_PIN             9
-#define FAN1_PIN           -1
+#define FAN1_PIN            3
 
 //
 // Temperature Sensors
