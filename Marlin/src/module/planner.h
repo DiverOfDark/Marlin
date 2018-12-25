@@ -733,6 +733,8 @@ class Planner {
     // Wait for moves to finish and disable all steppers
     static void finish_and_disable();
 
+    static void UpdateFan();
+
     // Periodic tick to handle cleaning timeouts
     // Called from the Temperature ISR at ~1kHz
     static void tick() {
@@ -808,6 +810,8 @@ class Planner {
     FORCE_INLINE static void discard_current_block() {
       if (has_blocks_queued())
         block_buffer_tail = next_block_index(block_buffer_tail);
+
+      UpdateFan();
     }
 
     #if ENABLED(ULTRA_LCD)

@@ -26,6 +26,7 @@
 
 #include "../gcode.h"
 #include "../../Marlin.h" // for fan_speed — should move those to Planner
+#include "../../module/planner.h"
 
 #if ENABLED(SINGLENOZZLE)
   #include "../../module/motion.h"
@@ -37,7 +38,7 @@
  *
  *  S<int>   Speed between 0-255
  *  P<index> Fan index, if more than one fan
- *
+ * 
  * With EXTRA_FAN_SPEED enabled:
  *
  *  T<int>   Restore/Use/Set Temporary Speed:
@@ -77,6 +78,8 @@ void GcodeSuite::M106() {
     #endif // EXTRA_FAN_SPEED
     fan_speed[p] = MIN(s, 255U);
   }
+
+  Planner::buffer_sync_block();
 }
 
 /**
@@ -92,6 +95,8 @@ void GcodeSuite::M107() {
   #endif
 
   if (p < FAN_COUNT) fan_speed[p] = 0;
+
+  Planner::buffer_sync_block();
 }
 
 #endif // FAN_COUNT > 0
