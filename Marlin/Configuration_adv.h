@@ -1935,19 +1935,19 @@
   // #define USER_SCRIPT_AUDIBLE_FEEDBACK
   // #define USER_SCRIPT_RETURN  // Return to status screen after a script
 
-  #define USER_DESC_1 _UxGT("Вкл лазер в 0")
+  #define USER_DESC_1 ("Вкл лазер в 0")
   #define USER_GCODE_1 "M3 S0"
 
-  #define USER_DESC_2 _UxGT("Вкл лазер в 1")
+  #define USER_DESC_2 ("Вкл лазер в 1")
   #define USER_GCODE_2 "M3 S1"
 
-  #define USER_DESC_3 _UxGT("Вкл лазер в 25")
+  #define USER_DESC_3 ("Вкл лазер в 25")
   #define USER_GCODE_3 "M3 S25"
 
-  #define USER_DESC_4 _UxGT("Вкл лазер в 255")
+  #define USER_DESC_4 ("Вкл лазер в 255")
   #define USER_GCODE_4 "M3 S255"
   
-  #define USER_DESC_5 _UxGT("Выкл лазер")
+  #define USER_DESC_5 ("Выкл лазер")
   #define USER_GCODE_5 "M5"
 
   //#define USER_DESC_4 "Heat Bed/Home/Level"

@@ -2893,11 +2893,12 @@ void Planner::UpdateFan(){
   if (has_blocks_queued()) {
     #if FAN_COUNT > 0
       FANS_LOOP(i)
-        tail_fan_speed[i] = block_buffer[block_buffer_tail].fan_speed[i];
+        tail_fan_speed[i] = (block_buffer[block_buffer_tail].fan_speed[i] * uint16_t(thermalManager.fan_speed_scaler[i])) >> 7;
     #endif
   } else {
     #if FAN_COUNT > 0
-      FANS_LOOP(i) tail_fan_speed[i] = fan_speed[i];
+      FANS_LOOP(i)
+        tail_fan_speed[i] = (thermalManager.fan_speed[i] * uint16_t(thermalManager.fan_speed_scaler[i])) >> 7;
     #endif
   }
 
