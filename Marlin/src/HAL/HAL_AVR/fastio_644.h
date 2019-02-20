@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -19,13 +19,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#pragma once
 
 /**
  * Pin mapping for the 644, 644p, 644pa, and 1284p
  *
- *   644p     00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
- *   Port     B0 B1 B2 B3 B4 B5 B6 B7 D0 D1 D2 D3 D4 D5 D6 D7 C0 C1 C2 C3 C4 C5 C6 C7 A7 A6 A5 A4 A3 A2 A1 A0
- *   Marlin   00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+ *   Logical Pin: 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+ *   Port:        B0 B1 B2 B3 B4 B5 B6 B7 D0 D1 D2 D3 D4 D5 D6 D7 C0 C1 C2 C3 C4 C5 C6 C7 A7 A6 A5 A4 A3 A2 A1 A0
  */
 
 /**                        ATMega644
@@ -53,9 +53,6 @@
  *       PWM (D 14) PD6 20|        |21  PD7 (D 15) PWM
  *                        +--------+
  */
-
-#ifndef _FASTIO_644_H_
-#define _FASTIO_644_H_
 
 #include "fastio_AVR.h"
 
@@ -553,5 +550,3 @@
 #define PD7_WPORT   PORTD
 #define PD7_DDR     DDRD
 #define PD7_PWM     OCR2A
-
-#endif // _FASTIO_644_H_

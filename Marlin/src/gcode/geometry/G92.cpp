@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -33,8 +33,6 @@
  */
 void GcodeSuite::G92() {
 
-  stepper.synchronize();
-
   #if ENABLED(CNC_COORDINATE_SYSTEMS)
     switch (parser.subcode) {
       case 1:
@@ -44,7 +42,7 @@ void GcodeSuite::G92() {
             const float v = position_shift[i];
             if (v) {
               position_shift[i] = 0;
-              update_software_endstops((AxisEnum)i);
+              update_workspace_offset((AxisEnum)i);
             }
           }
         #endif // Not SCARA
@@ -81,7 +79,7 @@ void GcodeSuite::G92() {
           }
           else {
             position_shift[i] += d;       // Other axes simply offset the coordinate space
-            update_software_endstops((AxisEnum)i);
+            update_workspace_offset((AxisEnum)i);
           }
         #endif
       }
@@ -94,10 +92,8 @@ void GcodeSuite::G92() {
       COPY(coordinate_system[active_coordinate_system], position_shift);
   #endif
 
-  if (didXYZ)
-    SYNC_PLAN_POSITION_KINEMATIC();
-  else if (didE)
-    sync_plan_position_e();
+  if    (didXYZ) sync_plan_position();
+  else if (didE) sync_plan_position_e();
 
   report_current_position();
 }

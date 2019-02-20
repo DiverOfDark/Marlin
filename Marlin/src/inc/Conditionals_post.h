@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -19,14 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#pragma once
 
 /**
  * Conditionals_post.h
  * Defines that depend on configuration but are not editable.
  */
-
-#ifndef CONDITIONALS_POST_H
-#define CONDITIONALS_POST_H
 
 #define AVR_ATmega2560_FAMILY_PLUS_70 ( \
      MB(BQ_ZUM_MEGA_3D)                 \
@@ -35,9 +33,17 @@
   || MB(SCOOVO_X9H)                     \
 )
 
-#define IS_SCARA (ENABLED(MORGAN_SCARA) || ENABLED(MAKERARM_SCARA))
-#define IS_KINEMATIC (ENABLED(DELTA) || IS_SCARA)
-#define IS_CARTESIAN !IS_KINEMATIC
+#ifdef TEENSYDUINO
+  #undef max
+  #define max(a,b) ((a)>(b)?(a):(b))
+  #undef min
+  #define min(a,b) ((a)<(b)?(a):(b))
+
+  #undef NOT_A_PIN    // Override Teensyduino legacy CapSense define work-around
+  #define NOT_A_PIN 0 // For PINS_DEBUGGING
+#endif
+
+#define HAS_CLASSIC_JERK (IS_KINEMATIC || DISABLED(JUNCTION_DEVIATION))
 
 /**
  * Axis lengths and center
@@ -74,6 +80,18 @@
 #define X_MAX_BED (X_CENTER + (X_BED_SIZE) / 2)
 #define Y_MIN_BED (Y_CENTER - (Y_BED_SIZE) / 2)
 #define Y_MAX_BED (Y_CENTER + (Y_BED_SIZE) / 2)
+
+/**
+ * Dual X Carriage
+ */
+#if ENABLED(DUAL_X_CARRIAGE)
+  #ifndef X1_MIN_POS
+    #define X1_MIN_POS X_MIN_POS
+  #endif
+  #ifndef X1_MAX_POS
+    #define X1_MAX_POS X_BED_SIZE
+  #endif
+#endif
 
 /**
  * CoreXY, CoreXZ, and CoreYZ - and their reverse
@@ -127,7 +145,7 @@
   #if ENABLED(DELTA)
     #define X_HOME_POS 0
   #else
-    #define X_HOME_POS ((X_BED_SIZE) * (X_HOME_DIR) * 0.5)
+    #define X_HOME_POS (X_HOME_DIR < 0 ? X_MIN_POS : X_MAX_POS)
   #endif
 #else
   #if ENABLED(DELTA)
@@ -143,7 +161,7 @@
   #if ENABLED(DELTA)
     #define Y_HOME_POS 0
   #else
-    #define Y_HOME_POS ((Y_BED_SIZE) * (Y_HOME_DIR) * 0.5)
+    #define Y_HOME_POS (Y_HOME_DIR < 0 ? Y_MIN_POS : Y_MAX_POS)
   #endif
 #else
   #if ENABLED(DELTA)
@@ -165,11 +183,6 @@
 #if ENABLED(DELTA) && !defined(DELTA_HEIGHT)
   #define DELTA_HEIGHT Z_HOME_POS
 #endif
-
-/**
- * Auto Bed Leveling and Z Probe Repeatability Test
- */
-#define HOMING_Z_WITH_PROBE (HAS_BED_PROBE && Z_HOME_DIR < 0 && ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN))
 
 /**
  * Z Sled Probe requires Z_SAFE_HOMING
@@ -210,22 +223,6 @@
   #define DEFAULT_KEEPALIVE_INTERVAL 2
 #endif
 
-#ifdef CPU_32_BIT
-  /**
-   * Hidden options for developer
-   */
-  // Double stepping starts at STEP_DOUBLER_FREQUENCY + 1, quad stepping starts at STEP_DOUBLER_FREQUENCY * 2 + 1
-  #ifndef STEP_DOUBLER_FREQUENCY
-    #if ENABLED(LIN_ADVANCE)
-      #define STEP_DOUBLER_FREQUENCY 60000 // Hz
-    #else
-      #define STEP_DOUBLER_FREQUENCY 80000 // Hz
-    #endif
-  #endif
-  // Disable double / quad stepping
-  //#define DISABLE_MULTI_STEPPING
-#endif
-
 /**
  * Provide a MAX_AUTORETRACT for older configs
  */
@@ -234,46 +231,9 @@
 #endif
 
 /**
- * MAX_STEP_FREQUENCY differs for TOSHIBA
- */
-#if ENABLED(CONFIG_STEPPERS_TOSHIBA)
-  #ifdef CPU_32_BIT
-    #define MAX_STEP_FREQUENCY STEP_DOUBLER_FREQUENCY // Max step frequency for Toshiba Stepper Controllers, 96kHz is close to maximum for an Arduino Due
-  #else
-    #define MAX_STEP_FREQUENCY 10000 // Max step frequency for Toshiba Stepper Controllers
-  #endif
-#else
-  #ifdef CPU_32_BIT
-    #define MAX_STEP_FREQUENCY (STEP_DOUBLER_FREQUENCY * 4) // Max step frequency for the Due is approx. 330kHz
-  #else
-    #define MAX_STEP_FREQUENCY 40000 // Max step frequency for Ultimaker (5000 pps / half step)
-  #endif
-#endif
-
-// MS1 MS2 Stepper Driver Microstepping mode table
-#define MICROSTEP1 LOW,LOW
-#if ENABLED(HEROIC_STEPPER_DRIVERS)
-  #define MICROSTEP128 LOW,HIGH
-#else
-  #define MICROSTEP2 HIGH,LOW
-  #define MICROSTEP4 LOW,HIGH
-#endif
-#define MICROSTEP8 HIGH,HIGH
-#ifdef __SAM3X8E__
-  #if MB(ALLIGATOR)
-    #define MICROSTEP16 LOW,LOW
-    #define MICROSTEP32 HIGH,HIGH
-  #else
-    #define MICROSTEP16 HIGH,HIGH
-  #endif
-#else
-  #define MICROSTEP16 HIGH,HIGH
-#endif
-
-/**
  * Override here because this is set in Configuration_adv.h
  */
-#if ENABLED(ULTIPANEL) && DISABLED(ELB_FULL_GRAPHIC_CONTROLLER)
+#if HAS_LCD_MENU && DISABLED(ELB_FULL_GRAPHIC_CONTROLLER)
   #undef SD_DETECT_INVERTED
 #endif
 
@@ -310,15 +270,17 @@
 /**
  * Temp Sensor defines
  */
-#if TEMP_SENSOR_0 == -3
+#if TEMP_SENSOR_0 == -4
+  #define HEATER_0_USES_AD8495
+#elif TEMP_SENSOR_0 == -3
   #define HEATER_0_USES_MAX6675
   #define MAX6675_IS_MAX31855
-  #define MAX6675_TMIN -270
-  #define MAX6675_TMAX 1800
+  #define HEATER_0_MAX6675_TMIN -270
+  #define HEATER_0_MAX6675_TMAX 1800
 #elif TEMP_SENSOR_0 == -2
   #define HEATER_0_USES_MAX6675
-  #define MAX6675_TMIN 0
-  #define MAX6675_TMAX 1024
+  #define HEATER_0_MAX6675_TMIN 0
+  #define HEATER_0_MAX6675_TMAX 1024
 #elif TEMP_SENSOR_0 == -1
   #define HEATER_0_USES_AD595
 #elif TEMP_SENSOR_0 == 0
@@ -329,8 +291,22 @@
   #define HEATER_0_USES_THERMISTOR
 #endif
 
-#if TEMP_SENSOR_1 <= -2
-  #error "MAX6675 / MAX31855 Thermocouples not supported for TEMP_SENSOR_1"
+#if TEMP_SENSOR_1 == -4
+  #define HEATER_1_USES_AD8495
+#elif TEMP_SENSOR_1 == -3
+  #if TEMP_SENSOR_0 == -2
+    #error "If MAX31855 Thermocouple (-3) is used for TEMP_SENSOR_1 then TEMP_SENSOR_0 must match."
+  #endif
+  #define HEATER_1_USES_MAX6675
+  #define HEATER_1_MAX6675_TMIN -270
+  #define HEATER_1_MAX6675_TMAX 1800
+#elif TEMP_SENSOR_1 == -2
+  #if TEMP_SENSOR_0 == -3
+    #error "If MAX31855 Thermocouple (-3) is used for TEMP_SENSOR_0 then TEMP_SENSOR_1 must match."
+  #endif
+  #define HEATER_1_USES_MAX6675
+  #define HEATER_1_MAX6675_TMIN 0
+  #define HEATER_1_MAX6675_TMAX 1024
 #elif TEMP_SENSOR_1 == -1
   #define HEATER_1_USES_AD595
 #elif TEMP_SENSOR_1 == 0
@@ -341,8 +317,12 @@
   #define HEATER_1_USES_THERMISTOR
 #endif
 
-#if TEMP_SENSOR_2 <= -2
-  #error "MAX6675 / MAX31855 Thermocouples not supported for TEMP_SENSOR_2"
+#if TEMP_SENSOR_2 == -4
+  #define HEATER_2_USES_AD8495
+#elif TEMP_SENSOR_2 == -3
+  #error "MAX31855 Thermocouples (-3) not supported for TEMP_SENSOR_2."
+#elif TEMP_SENSOR_2 == -2
+  #error "MAX6675 Thermocouples (-2) not supported for TEMP_SENSOR_2."
 #elif TEMP_SENSOR_2 == -1
   #define HEATER_2_USES_AD595
 #elif TEMP_SENSOR_2 == 0
@@ -353,8 +333,12 @@
   #define HEATER_2_USES_THERMISTOR
 #endif
 
-#if TEMP_SENSOR_3 <= -2
-  #error "MAX6675 / MAX31855 Thermocouples not supported for TEMP_SENSOR_3"
+#if TEMP_SENSOR_3 == -4
+  #define HEATER_3_USES_AD8495
+#elif TEMP_SENSOR_3 == -3
+  #error "MAX31855 Thermocouples (-3) not supported for TEMP_SENSOR_3."
+#elif TEMP_SENSOR_3 == -2
+  #error "MAX6675 Thermocouples (-2) not supported for TEMP_SENSOR_3."
 #elif TEMP_SENSOR_3 == -1
   #define HEATER_3_USES_AD595
 #elif TEMP_SENSOR_3 == 0
@@ -365,8 +349,12 @@
   #define HEATER_3_USES_THERMISTOR
 #endif
 
-#if TEMP_SENSOR_4 <= -2
-  #error "MAX6675 / MAX31855 Thermocouples not supported for TEMP_SENSOR_4"
+#if TEMP_SENSOR_4 == -4
+  #define HEATER_4_USES_AD8495
+#elif TEMP_SENSOR_4 == -3
+  #error "MAX31855 Thermocouples (-3) not supported for TEMP_SENSOR_4."
+#elif TEMP_SENSOR_4 == -2
+  #error "MAX6675 Thermocouples (-2) not supported for TEMP_SENSOR_4."
 #elif TEMP_SENSOR_4 == -1
   #define HEATER_4_USES_AD595
 #elif TEMP_SENSOR_4 == 0
@@ -377,27 +365,52 @@
   #define HEATER_4_USES_THERMISTOR
 #endif
 
-#if TEMP_SENSOR_BED <= -2
-  #error "MAX6675 / MAX31855 Thermocouples not supported for TEMP_SENSOR_BED"
+#if TEMP_SENSOR_5 == -4
+  #define HEATER_5_USES_AD8495
+#elif TEMP_SENSOR_5 == -3
+  #error "MAX31855 Thermocouples (-3) not supported for TEMP_SENSOR_5."
+#elif TEMP_SENSOR_5 == -2
+  #error "MAX6675 Thermocouples (-2) not supported for TEMP_SENSOR_5."
+#elif TEMP_SENSOR_5 == -1
+  #define HEATER_5_USES_AD595
+#elif TEMP_SENSOR_5 == 0
+  #undef HEATER_5_MINTEMP
+  #undef HEATER_5_MAXTEMP
+#elif TEMP_SENSOR_5 > 0
+  #define THERMISTORHEATER_5 TEMP_SENSOR_5
+  #define HEATER_5_USES_THERMISTOR
+#endif
+
+#if TEMP_SENSOR_BED == -4
+  #define HEATER_BED_USES_AD8495
+#elif TEMP_SENSOR_BED == -3
+  #error "MAX31855 Thermocouples (-3) not supported for TEMP_SENSOR_BED."
+#elif TEMP_SENSOR_BED == -2
+  #error "MAX6675 Thermocouples (-2) not supported for TEMP_SENSOR_BED."
 #elif TEMP_SENSOR_BED == -1
-  #define BED_USES_AD595
+  #define HEATER_BED_USES_AD595
 #elif TEMP_SENSOR_BED == 0
   #undef BED_MINTEMP
   #undef BED_MAXTEMP
 #elif TEMP_SENSOR_BED > 0
   #define THERMISTORBED TEMP_SENSOR_BED
-  #define BED_USES_THERMISTOR
+  #define HEATER_BED_USES_THERMISTOR
 #endif
 
-#ifdef __SAM3X8E__
-  #define HEATER_USES_AD595 (ENABLED(HEATER_0_USES_AD595) || ENABLED(HEATER_1_USES_AD595) || ENABLED(HEATER_2_USES_AD595) || ENABLED(HEATER_3_USES_AD595))
+#if TEMP_SENSOR_CHAMBER == -4
+  #define HEATER_CHAMBER_USES_AD8495
+#elif TEMP_SENSOR_CHAMBER == -3
+  #error "MAX31855 Thermocouples (-3) not supported for TEMP_SENSOR_CHAMBER."
+#elif TEMP_SENSOR_CHAMBER == -2
+  #error "MAX6675 Thermocouples (-2) not supported for TEMP_SENSOR_CHAMBER."
+#elif TEMP_SENSOR_CHAMBER == -1
+  #define HEATER_CHAMBER_USES_AD595
+#elif TEMP_SENSOR_CHAMBER > 0
+  #define THERMISTORCHAMBER TEMP_SENSOR_CHAMBER
+  #define HEATER_CHAMBER_USES_THERMISTOR
 #endif
 
-/**
- * Flags for PID handling
- */
-#define HAS_PID_HEATING (ENABLED(PIDTEMP) || ENABLED(PIDTEMPBED))
-#define HAS_PID_FOR_BOTH (ENABLED(PIDTEMP) && ENABLED(PIDTEMPBED))
+#define HOTEND_USES_THERMISTOR (ENABLED(HEATER_0_USES_THERMISTOR) || ENABLED(HEATER_1_USES_THERMISTOR) || ENABLED(HEATER_2_USES_THERMISTOR) || ENABLED(HEATER_3_USES_THERMISTOR) || ENABLED(HEATER_4_USES_THERMISTOR))
 
 /**
  * Default hotend offsets, if not defined
@@ -409,8 +422,8 @@
   #ifndef HOTEND_OFFSET_Y
     #define HOTEND_OFFSET_Y { 0 } // Y offsets for each extruder
   #endif
-  #if !defined(HOTEND_OFFSET_Z) && (ENABLED(DUAL_X_CARRIAGE) || ENABLED(SWITCHING_NOZZLE))
-    #define HOTEND_OFFSET_Z { 0 }
+  #ifndef HOTEND_OFFSET_Z
+    #define HOTEND_OFFSET_Z { 0 } // Z offsets for each extruder
   #endif
 #endif
 
@@ -425,6 +438,68 @@
  */
 #define ARRAY_BY_HOTENDS(...) ARRAY_N(HOTENDS, __VA_ARGS__)
 #define ARRAY_BY_HOTENDS1(v1) ARRAY_BY_HOTENDS(v1, v1, v1, v1, v1, v1)
+
+/**
+ * Driver Timings
+ * NOTE: Driver timing order is longest-to-shortest duration.
+ *       Preserve this ordering when adding new drivers.
+ */
+
+#define TRINAMICS (HAS_TRINAMIC || HAS_DRIVER(TMC2130_STANDALONE) || HAS_DRIVER(TMC2208_STANDALONE) || HAS_DRIVER(TMC26X_STANDALONE) || HAS_DRIVER(TMC2660_STANDALONE) || HAS_DRIVER(TMC5130_STANDALONE) || HAS_DRIVER(TMC5160_STANDALONE) || HAS_DRIVER(TMC2160_STANDALONE))
+
+#ifndef MINIMUM_STEPPER_DIR_DELAY
+  #if HAS_DRIVER(TB6560)
+    #define MINIMUM_STEPPER_DIR_DELAY 15000
+  #elif HAS_DRIVER(TB6600)
+    #define MINIMUM_STEPPER_DIR_DELAY 1500
+  #elif HAS_DRIVER(DRV8825)
+    #define MINIMUM_STEPPER_DIR_DELAY 650
+  #elif HAS_DRIVER(LV8729)
+    #define MINIMUM_STEPPER_DIR_DELAY 500
+  #elif HAS_DRIVER(A5984)
+    #define MINIMUM_STEPPER_DIR_DELAY 400
+  #elif HAS_DRIVER(A4988)
+    #define MINIMUM_STEPPER_DIR_DELAY 200
+  #elif TRINAMICS
+    #define MINIMUM_STEPPER_DIR_DELAY 20
+  #else
+    #define MINIMUM_STEPPER_DIR_DELAY 0   // Expect at least 10µS since one Stepper ISR must transpire
+  #endif
+#endif
+
+#ifndef MINIMUM_STEPPER_PULSE
+  #if HAS_DRIVER(TB6560)
+    #define MINIMUM_STEPPER_PULSE 30
+  #elif HAS_DRIVER(TB6600)
+    #define MINIMUM_STEPPER_PULSE 3
+  #elif HAS_DRIVER(DRV8825)
+    #define MINIMUM_STEPPER_PULSE 2
+  #elif HAS_DRIVER(A4988) || HAS_DRIVER(LV8729) || HAS_DRIVER(A5984)
+    #define MINIMUM_STEPPER_PULSE 1
+  #elif TRINAMICS
+    #define MINIMUM_STEPPER_PULSE 0
+  #else
+    #define MINIMUM_STEPPER_PULSE 2
+  #endif
+#endif
+
+#ifndef MAXIMUM_STEPPER_RATE
+  #if HAS_DRIVER(TB6560)
+    #define MAXIMUM_STEPPER_RATE 15000
+  #elif HAS_DRIVER(LV8729)
+    #define MAXIMUM_STEPPER_RATE 130000
+  #elif HAS_DRIVER(TB6600)
+    #define MAXIMUM_STEPPER_RATE 150000
+  #elif HAS_DRIVER(DRV8825)
+    #define MAXIMUM_STEPPER_RATE 250000
+  #elif TRINAMICS
+    #define MAXIMUM_STEPPER_RATE 400000
+  #elif HAS_DRIVER(A4988)
+    #define MAXIMUM_STEPPER_RATE 500000
+  #else
+    #define MAXIMUM_STEPPER_RATE 250000
+  #endif
+#endif
 
 /**
  * X_DUAL_ENDSTOPS endstop reassignment
@@ -541,7 +616,7 @@
 /**
  * Z_DUAL_ENDSTOPS endstop reassignment
  */
-#if ENABLED(Z_DUAL_ENDSTOPS)
+#if Z_MULTI_ENDSTOPS
   #if Z_HOME_DIR > 0
     #if Z2_USE_ENDSTOP == _XMIN_
       #define Z2_MAX_ENDSTOP_INVERTING X_MIN_ENDSTOP_INVERTING
@@ -591,9 +666,64 @@
   #endif
 #endif
 
+#if ENABLED(Z_TRIPLE_ENDSTOPS)
+  #if Z_HOME_DIR > 0
+    #if Z3_USE_ENDSTOP == _XMIN_
+      #define Z3_MAX_ENDSTOP_INVERTING X_MIN_ENDSTOP_INVERTING
+      #define Z3_MAX_PIN X_MIN_PIN
+    #elif Z3_USE_ENDSTOP == _XMAX_
+      #define Z3_MAX_ENDSTOP_INVERTING X_MAX_ENDSTOP_INVERTING
+      #define Z3_MAX_PIN X_MAX_PIN
+    #elif Z3_USE_ENDSTOP == _YMIN_
+      #define Z3_MAX_ENDSTOP_INVERTING Y_MIN_ENDSTOP_INVERTING
+      #define Z3_MAX_PIN Y_MIN_PIN
+    #elif Z3_USE_ENDSTOP == _YMAX_
+      #define Z3_MAX_ENDSTOP_INVERTING Y_MAX_ENDSTOP_INVERTING
+      #define Z3_MAX_PIN Y_MAX_PIN
+    #elif Z3_USE_ENDSTOP == _ZMIN_
+      #define Z3_MAX_ENDSTOP_INVERTING Z_MIN_ENDSTOP_INVERTING
+      #define Z3_MAX_PIN Z_MIN_PIN
+    #elif Z3_USE_ENDSTOP == _ZMAX_
+      #define Z3_MAX_ENDSTOP_INVERTING Z_MAX_ENDSTOP_INVERTING
+      #define Z3_MAX_PIN Z_MAX_PIN
+    #else
+      #define Z3_MAX_ENDSTOP_INVERTING false
+    #endif
+    #define Z3_MIN_ENDSTOP_INVERTING false
+  #else
+    #if Z3_USE_ENDSTOP == _XMIN_
+      #define Z3_MIN_ENDSTOP_INVERTING X_MIN_ENDSTOP_INVERTING
+      #define Z3_MIN_PIN X_MIN_PIN
+    #elif Z3_USE_ENDSTOP == _XMAX_
+      #define Z3_MIN_ENDSTOP_INVERTING X_MAX_ENDSTOP_INVERTING
+      #define Z3_MIN_PIN X_MAX_PIN
+    #elif Z3_USE_ENDSTOP == _YMIN_
+      #define Z3_MIN_ENDSTOP_INVERTING Y_MIN_ENDSTOP_INVERTING
+      #define Z3_MIN_PIN Y_MIN_PIN
+    #elif Z3_USE_ENDSTOP == _YMAX_
+      #define Z3_MIN_ENDSTOP_INVERTING Y_MAX_ENDSTOP_INVERTING
+      #define Z3_MIN_PIN Y_MAX_PIN
+    #elif Z3_USE_ENDSTOP == _ZMIN_
+      #define Z3_MIN_ENDSTOP_INVERTING Z_MIN_ENDSTOP_INVERTING
+      #define Z3_MIN_PIN Z_MIN_PIN
+    #elif Z3_USE_ENDSTOP == _ZMAX_
+      #define Z3_MIN_ENDSTOP_INVERTING Z_MAX_ENDSTOP_INVERTING
+      #define Z3_MIN_PIN Z_MAX_PIN
+    #else
+      #define Z3_MIN_ENDSTOP_INVERTING false
+    #endif
+    #define Z3_MAX_ENDSTOP_INVERTING false
+  #endif
+#endif
+
 // Is an endstop plug used for the Z2 endstop or the bed probe?
 #define IS_Z2_OR_PROBE(A,M) ( \
-     (ENABLED(Z_DUAL_ENDSTOPS) && Z2_USE_ENDSTOP == _##A##M##_) \
+     (Z_MULTI_ENDSTOPS && Z2_USE_ENDSTOP == _##A##M##_) \
+  || (ENABLED(Z_MIN_PROBE_ENDSTOP) && Z_MIN_PROBE_PIN == A##_##M##_PIN ) )
+
+// Is an endstop plug used for the Z3 endstop or the bed probe?
+#define IS_Z3_OR_PROBE(A,M) ( \
+     (ENABLED(Z_TRIPLE_ENDSTOPS) && Z3_USE_ENDSTOP == _##A##M##_) \
   || (ENABLED(Z_MIN_PROBE_ENDSTOP) && Z_MIN_PROBE_PIN == A##_##M##_PIN ) )
 
 /**
@@ -649,112 +779,131 @@
  */
 
 // Steppers
-#define HAS_X_ENABLE      (PIN_EXISTS(X_ENABLE))
+#define HAS_X_ENABLE      (PIN_EXISTS(X_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(X)))
 #define HAS_X_DIR         (PIN_EXISTS(X_DIR))
 #define HAS_X_STEP        (PIN_EXISTS(X_STEP))
 #define HAS_X_MICROSTEPS  (PIN_EXISTS(X_MS1))
 
-#define HAS_X2_ENABLE     (PIN_EXISTS(X2_ENABLE))
+#define HAS_X2_ENABLE     (PIN_EXISTS(X2_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(X2)))
 #define HAS_X2_DIR        (PIN_EXISTS(X2_DIR))
 #define HAS_X2_STEP       (PIN_EXISTS(X2_STEP))
-#define HAS_Y_MICROSTEPS  (PIN_EXISTS(Y_MS1))
+#define HAS_X2_MICROSTEPS (PIN_EXISTS(X2_MS1))
 
-#define HAS_Y_ENABLE      (PIN_EXISTS(Y_ENABLE))
+#define HAS_Y_ENABLE      (PIN_EXISTS(Y_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(Y)))
 #define HAS_Y_DIR         (PIN_EXISTS(Y_DIR))
 #define HAS_Y_STEP        (PIN_EXISTS(Y_STEP))
-#define HAS_Z_MICROSTEPS  (PIN_EXISTS(Z_MS1))
+#define HAS_Y_MICROSTEPS  (PIN_EXISTS(Y_MS1))
 
-#define HAS_Y2_ENABLE     (PIN_EXISTS(Y2_ENABLE))
+#define HAS_Y2_ENABLE     (PIN_EXISTS(Y2_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(Y2)))
 #define HAS_Y2_DIR        (PIN_EXISTS(Y2_DIR))
 #define HAS_Y2_STEP       (PIN_EXISTS(Y2_STEP))
+#define HAS_Y2_MICROSTEPS (PIN_EXISTS(Y2_MS1))
 
-#define HAS_Z_ENABLE      (PIN_EXISTS(Z_ENABLE))
+#define HAS_Z_ENABLE      (PIN_EXISTS(Z_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(Z)))
 #define HAS_Z_DIR         (PIN_EXISTS(Z_DIR))
 #define HAS_Z_STEP        (PIN_EXISTS(Z_STEP))
+#define HAS_Z_MICROSTEPS  (PIN_EXISTS(Z_MS1))
 
-#define HAS_Z2_ENABLE     (PIN_EXISTS(Z2_ENABLE))
+#define HAS_Z2_ENABLE     (PIN_EXISTS(Z2_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(Z2)))
 #define HAS_Z2_DIR        (PIN_EXISTS(Z2_DIR))
 #define HAS_Z2_STEP       (PIN_EXISTS(Z2_STEP))
+#define HAS_Z2_MICROSTEPS (PIN_EXISTS(Z2_MS1))
+
+#define HAS_Z3_ENABLE     (PIN_EXISTS(Z3_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(Z3)))
+#define HAS_Z3_DIR        (PIN_EXISTS(Z3_DIR))
+#define HAS_Z3_STEP       (PIN_EXISTS(Z3_STEP))
+#define HAS_Z3_MICROSTEPS (PIN_EXISTS(Z3_MS1))
 
 // Extruder steppers and solenoids
-#define HAS_E0_ENABLE     (PIN_EXISTS(E0_ENABLE))
+#define HAS_E0_ENABLE     (PIN_EXISTS(E0_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(E0)))
 #define HAS_E0_DIR        (PIN_EXISTS(E0_DIR))
 #define HAS_E0_STEP       (PIN_EXISTS(E0_STEP))
 #define HAS_E0_MICROSTEPS (PIN_EXISTS(E0_MS1))
 #define HAS_SOLENOID_0    (PIN_EXISTS(SOL0))
 
-#define HAS_E1_ENABLE     (PIN_EXISTS(E1_ENABLE))
+#define HAS_E1_ENABLE     (PIN_EXISTS(E1_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(E1)))
 #define HAS_E1_DIR        (PIN_EXISTS(E1_DIR))
 #define HAS_E1_STEP       (PIN_EXISTS(E1_STEP))
 #define HAS_E1_MICROSTEPS (PIN_EXISTS(E1_MS1))
 #define HAS_SOLENOID_1    (PIN_EXISTS(SOL1))
 
-#define HAS_E2_ENABLE     (PIN_EXISTS(E2_ENABLE))
+#define HAS_E2_ENABLE     (PIN_EXISTS(E2_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(E2)))
 #define HAS_E2_DIR        (PIN_EXISTS(E2_DIR))
 #define HAS_E2_STEP       (PIN_EXISTS(E2_STEP))
 #define HAS_E2_MICROSTEPS (PIN_EXISTS(E2_MS1))
 #define HAS_SOLENOID_2    (PIN_EXISTS(SOL2))
 
-#define HAS_E3_ENABLE     (PIN_EXISTS(E3_ENABLE))
+#define HAS_E3_ENABLE     (PIN_EXISTS(E3_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(E3)))
 #define HAS_E3_DIR        (PIN_EXISTS(E3_DIR))
 #define HAS_E3_STEP       (PIN_EXISTS(E3_STEP))
 #define HAS_E3_MICROSTEPS (PIN_EXISTS(E3_MS1))
 #define HAS_SOLENOID_3    (PIN_EXISTS(SOL3))
 
-#define HAS_E4_ENABLE     (PIN_EXISTS(E4_ENABLE))
+#define HAS_E4_ENABLE     (PIN_EXISTS(E4_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(E4)))
 #define HAS_E4_DIR        (PIN_EXISTS(E4_DIR))
 #define HAS_E4_STEP       (PIN_EXISTS(E4_STEP))
 #define HAS_E4_MICROSTEPS (PIN_EXISTS(E4_MS1))
 #define HAS_SOLENOID_4    (PIN_EXISTS(SOL4))
 
-// Trinamic Stepper Drivers
-#define HAS_TRINAMIC (ENABLED(HAVE_TMC2130) || ENABLED(HAVE_TMC2208) || ENABLED(IS_TRAMS))
-#define  X_IS_TRINAMIC (ENABLED( X_IS_TMC2130) || ENABLED( X_IS_TMC2208) || ENABLED(IS_TRAMS))
-#define X2_IS_TRINAMIC (ENABLED(X2_IS_TMC2130) || ENABLED(X2_IS_TMC2208))
-#define  Y_IS_TRINAMIC (ENABLED( Y_IS_TMC2130) || ENABLED( Y_IS_TMC2208) || ENABLED(IS_TRAMS))
-#define Y2_IS_TRINAMIC (ENABLED(Y2_IS_TMC2130) || ENABLED(Y2_IS_TMC2208))
-#define  Z_IS_TRINAMIC (ENABLED( Z_IS_TMC2130) || ENABLED( Z_IS_TMC2208) || ENABLED(IS_TRAMS))
-#define Z2_IS_TRINAMIC (ENABLED(Z2_IS_TMC2130) || ENABLED(Z2_IS_TMC2208))
-#define E0_IS_TRINAMIC (ENABLED(E0_IS_TMC2130) || ENABLED(E0_IS_TMC2208) || ENABLED(IS_TRAMS))
-#define E1_IS_TRINAMIC (ENABLED(E1_IS_TMC2130) || ENABLED(E1_IS_TMC2208))
-#define E2_IS_TRINAMIC (ENABLED(E2_IS_TMC2130) || ENABLED(E2_IS_TMC2208))
-#define E3_IS_TRINAMIC (ENABLED(E3_IS_TMC2130) || ENABLED(E3_IS_TMC2208))
-#define E4_IS_TRINAMIC (ENABLED(E4_IS_TMC2130) || ENABLED(E4_IS_TMC2208))
+#define HAS_E5_ENABLE     (PIN_EXISTS(E5_ENABLE) || (ENABLED(SOFTWARE_DRIVER_ENABLE) && AXIS_IS_TMC(E5)))
+#define HAS_E5_DIR        (PIN_EXISTS(E5_DIR))
+#define HAS_E5_STEP       (PIN_EXISTS(E5_STEP))
+#define HAS_E5_MICROSTEPS (PIN_EXISTS(E5_MS1))
+#define HAS_SOLENOID_5    (PIN_EXISTS(SOL5))
 
-// Disable Z axis sensorless homing if a probe is used to home the Z axis
-#if ENABLED(SENSORLESS_HOMING)
-  #define X_SENSORLESS (ENABLED(X_IS_TMC2130) && defined(X_HOMING_SENSITIVITY))
-  #define Y_SENSORLESS (ENABLED(Y_IS_TMC2130) && defined(Y_HOMING_SENSITIVITY))
-  #define Z_SENSORLESS (ENABLED(Z_IS_TMC2130) && defined(Z_HOMING_SENSITIVITY))
+// Trinamic Stepper Drivers
+#if HAS_TRINAMIC
+  #define HAS_TMCX1X0       (HAS_DRIVER(TMC2130) || HAS_DRIVER(TMC2160) || HAS_DRIVER(TMC5130) || HAS_DRIVER(TMC5160))
+  #define TMC_HAS_SPI       (HAS_TMCX1X0 || HAS_DRIVER(TMC2660))
+  #define HAS_STALLGUARD    (HAS_TMCX1X0 || HAS_DRIVER(TMC2660))
+  #define HAS_STEALTHCHOP   (HAS_TMCX1X0 || HAS_DRIVER(TMC2208))
+  #define AXIS_HAS_SPI(ST)         (AXIS_DRIVER_TYPE(ST, TMC2130) || AXIS_DRIVER_TYPE(ST, TMC2160) || AXIS_DRIVER_TYPE(ST, TMC2660))
+  #define AXIS_HAS_STALLGUARD(ST)  (AXIS_DRIVER_TYPE(ST, TMC2130) || AXIS_DRIVER_TYPE(ST, TMC2160) || AXIS_DRIVER_TYPE(ST, TMC2660) || AXIS_DRIVER_TYPE(ST, TMC5130) || AXIS_DRIVER_TYPE(ST, TMC5160))
+  #define AXIS_HAS_STEALTHCHOP(ST) (AXIS_DRIVER_TYPE(ST, TMC2130) || AXIS_DRIVER_TYPE(ST, TMC2160) || AXIS_DRIVER_TYPE(ST, TMC2208) || AXIS_DRIVER_TYPE(ST, TMC5130) || AXIS_DRIVER_TYPE(ST, TMC5160))
+
+  #define STEALTHCHOP_ENABLED (ENABLED(STEALTHCHOP_XY) || ENABLED(STEALTHCHOP_Z) || ENABLED(STEALTHCHOP_E))
+  #define USE_SENSORLESS (ENABLED(SENSORLESS_HOMING) || ENABLED(SENSORLESS_PROBING))
+  // Disable Z axis sensorless homing if a probe is used to home the Z axis
   #if HOMING_Z_WITH_PROBE
-    #undef Z_HOMING_SENSITIVITY
+    #undef Z_STALL_SENSITIVITY
   #endif
+  #define X_SENSORLESS (AXIS_HAS_STALLGUARD(X) && defined(X_STALL_SENSITIVITY))
+  #define Y_SENSORLESS (AXIS_HAS_STALLGUARD(Y) && defined(Y_STALL_SENSITIVITY))
+  #define Z_SENSORLESS (AXIS_HAS_STALLGUARD(Z) && defined(Z_STALL_SENSITIVITY))
 #endif
 
 // Endstops and bed probe
-#define HAS_X_MIN (PIN_EXISTS(X_MIN) && !IS_X2_ENDSTOP(X,MIN) && !IS_Y2_ENDSTOP(X,MIN) && !IS_Z2_OR_PROBE(X,MIN))
-#define HAS_X_MAX (PIN_EXISTS(X_MAX) && !IS_X2_ENDSTOP(X,MAX) && !IS_Y2_ENDSTOP(X,MAX) && !IS_Z2_OR_PROBE(X,MAX))
-#define HAS_Y_MIN (PIN_EXISTS(Y_MIN) && !IS_X2_ENDSTOP(Y,MIN) && !IS_Y2_ENDSTOP(Y,MIN) && !IS_Z2_OR_PROBE(Y,MIN))
-#define HAS_Y_MAX (PIN_EXISTS(Y_MAX) && !IS_X2_ENDSTOP(Y,MAX) && !IS_Y2_ENDSTOP(Y,MAX) && !IS_Z2_OR_PROBE(Y,MAX))
-#define HAS_Z_MIN (PIN_EXISTS(Z_MIN) && !IS_X2_ENDSTOP(Z,MIN) && !IS_Y2_ENDSTOP(Z,MIN) && !IS_Z2_OR_PROBE(Z,MIN))
-#define HAS_Z_MAX (PIN_EXISTS(Z_MAX) && !IS_X2_ENDSTOP(Z,MAX) && !IS_Y2_ENDSTOP(Z,MAX) && !IS_Z2_OR_PROBE(Z,MAX))
+#define HAS_STOP_TEST(A,M) (PIN_EXISTS(A##_##M) && !IS_X2_ENDSTOP(A,M) && !IS_Y2_ENDSTOP(A,M) && !IS_Z2_OR_PROBE(A,M))
+#define HAS_X_MIN HAS_STOP_TEST(X,MIN)
+#define HAS_X_MAX HAS_STOP_TEST(X,MAX)
+#define HAS_Y_MIN HAS_STOP_TEST(Y,MIN)
+#define HAS_Y_MAX HAS_STOP_TEST(Y,MAX)
+#define HAS_Z_MIN HAS_STOP_TEST(Z,MIN)
+#define HAS_Z_MAX HAS_STOP_TEST(Z,MAX)
 #define HAS_X2_MIN (PIN_EXISTS(X2_MIN))
 #define HAS_X2_MAX (PIN_EXISTS(X2_MAX))
 #define HAS_Y2_MIN (PIN_EXISTS(Y2_MIN))
 #define HAS_Y2_MAX (PIN_EXISTS(Y2_MAX))
 #define HAS_Z2_MIN (PIN_EXISTS(Z2_MIN))
 #define HAS_Z2_MAX (PIN_EXISTS(Z2_MAX))
+#define HAS_Z3_MIN (PIN_EXISTS(Z3_MIN))
+#define HAS_Z3_MAX (PIN_EXISTS(Z3_MAX))
 #define HAS_Z_MIN_PROBE_PIN (PIN_EXISTS(Z_MIN_PROBE))
+#define HAS_CALIBRATION_PIN (PIN_EXISTS(CALIBRATION))
 
-// Thermistors
-#define HAS_TEMP_0 (PIN_EXISTS(TEMP_0) && TEMP_SENSOR_0 != 0 && TEMP_SENSOR_0 > -2)
-#define HAS_TEMP_1 (PIN_EXISTS(TEMP_1) && TEMP_SENSOR_1 != 0 && TEMP_SENSOR_1 > -2)
-#define HAS_TEMP_2 (PIN_EXISTS(TEMP_2) && TEMP_SENSOR_2 != 0 && TEMP_SENSOR_2 > -2)
-#define HAS_TEMP_3 (PIN_EXISTS(TEMP_3) && TEMP_SENSOR_3 != 0 && TEMP_SENSOR_3 > -2)
-#define HAS_TEMP_4 (PIN_EXISTS(TEMP_4) && TEMP_SENSOR_4 != 0 && TEMP_SENSOR_4 > -2)
-#define HAS_TEMP_HOTEND (HAS_TEMP_0 || ENABLED(HEATER_0_USES_MAX6675))
-#define HAS_TEMP_BED (PIN_EXISTS(TEMP_BED) && TEMP_SENSOR_BED != 0 && TEMP_SENSOR_BED > -2)
-#define HAS_TEMP_SENSOR (HAS_TEMP_HOTEND || HAS_TEMP_BED)
+// ADC Temp Sensors (Thermistor or Thermocouple with amplifier ADC interface)
+#define HAS_ADC_TEST(P) (PIN_EXISTS(TEMP_##P) && TEMP_SENSOR_##P != 0 && DISABLED(HEATER_##P##_USES_MAX6675))
+#define HAS_TEMP_ADC_0 HAS_ADC_TEST(0)
+#define HAS_TEMP_ADC_1 HAS_ADC_TEST(1)
+#define HAS_TEMP_ADC_2 HAS_ADC_TEST(2)
+#define HAS_TEMP_ADC_3 HAS_ADC_TEST(3)
+#define HAS_TEMP_ADC_4 HAS_ADC_TEST(4)
+#define HAS_TEMP_ADC_BED HAS_ADC_TEST(BED)
+#define HAS_TEMP_ADC_CHAMBER HAS_ADC_TEST(CHAMBER)
+
+#define HAS_TEMP_HOTEND (HAS_TEMP_ADC_0 || ENABLED(HEATER_0_USES_MAX6675))
+#define HAS_TEMP_BED HAS_TEMP_ADC_BED
+#define HAS_TEMP_CHAMBER HAS_TEMP_ADC_CHAMBER
 
 // Heaters
 #define HAS_HEATER_0 (PIN_EXISTS(HEATER_0))
@@ -764,8 +913,19 @@
 #define HAS_HEATER_4 (PIN_EXISTS(HEATER_4))
 #define HAS_HEATER_BED (PIN_EXISTS(HEATER_BED))
 
+// Shorthand for common combinations
+#define HAS_HEATED_BED (HAS_TEMP_BED && HAS_HEATER_BED)
+#define HAS_TEMP_SENSOR (HAS_TEMP_HOTEND || HAS_HEATED_BED || HAS_TEMP_CHAMBER)
+
+// PID heating
+#if !HAS_HEATED_BED
+  #undef PIDTEMPBED
+#endif
+#define HAS_PID_HEATING (ENABLED(PIDTEMP) || ENABLED(PIDTEMPBED))
+#define HAS_PID_FOR_BOTH (ENABLED(PIDTEMP) && ENABLED(PIDTEMPBED))
+
 // Thermal protection
-#define HAS_THERMALLY_PROTECTED_BED (ENABLED(THERMAL_PROTECTION_BED) && HAS_TEMP_BED && HAS_HEATER_BED)
+#define HAS_THERMALLY_PROTECTED_BED (HAS_HEATED_BED && ENABLED(THERMAL_PROTECTION_BED))
 #define WATCH_HOTENDS (ENABLED(THERMAL_PROTECTION_HOTENDS) && WATCH_TEMP_PERIOD > 0)
 #define WATCH_THE_BED (HAS_THERMALLY_PROTECTED_BED && WATCH_BED_TEMP_PERIOD > 0)
 
@@ -775,7 +935,9 @@
 #define HAS_AUTO_FAN_2 (HOTENDS > 2 && PIN_EXISTS(E2_AUTO_FAN))
 #define HAS_AUTO_FAN_3 (HOTENDS > 3 && PIN_EXISTS(E3_AUTO_FAN))
 #define HAS_AUTO_FAN_4 (HOTENDS > 4 && PIN_EXISTS(E4_AUTO_FAN))
-#define HAS_AUTO_FAN (HAS_AUTO_FAN_0 || HAS_AUTO_FAN_1 || HAS_AUTO_FAN_2 || HAS_AUTO_FAN_3)
+#define HAS_AUTO_FAN_5 (HOTENDS > 5 && PIN_EXISTS(E5_AUTO_FAN))
+#define HAS_AUTO_CHAMBER_FAN (PIN_EXISTS(CHAMBER_AUTO_FAN))
+#define HAS_AUTO_FAN (HAS_AUTO_FAN_0 || HAS_AUTO_FAN_1 || HAS_AUTO_FAN_2 || HAS_AUTO_FAN_3 || HAS_AUTO_FAN_4 || HAS_AUTO_FAN_5 || HAS_AUTO_CHAMBER_FAN)
 #define AUTO_1_IS_0 (E1_AUTO_FAN_PIN == E0_AUTO_FAN_PIN)
 #define AUTO_2_IS_0 (E2_AUTO_FAN_PIN == E0_AUTO_FAN_PIN)
 #define AUTO_2_IS_1 (E2_AUTO_FAN_PIN == E1_AUTO_FAN_PIN)
@@ -786,19 +948,40 @@
 #define AUTO_4_IS_1 (E4_AUTO_FAN_PIN == E1_AUTO_FAN_PIN)
 #define AUTO_4_IS_2 (E4_AUTO_FAN_PIN == E2_AUTO_FAN_PIN)
 #define AUTO_4_IS_3 (E4_AUTO_FAN_PIN == E3_AUTO_FAN_PIN)
+#define AUTO_5_IS_0 (E5_AUTO_FAN_PIN == E0_AUTO_FAN_PIN)
+#define AUTO_5_IS_1 (E5_AUTO_FAN_PIN == E1_AUTO_FAN_PIN)
+#define AUTO_5_IS_2 (E5_AUTO_FAN_PIN == E2_AUTO_FAN_PIN)
+#define AUTO_5_IS_3 (E5_AUTO_FAN_PIN == E3_AUTO_FAN_PIN)
+#define AUTO_5_IS_4 (E5_AUTO_FAN_PIN == E4_AUTO_FAN_PIN)
+#define AUTO_CHAMBER_IS_0 (CHAMBER_AUTO_FAN_PIN == E0_AUTO_FAN_PIN)
+#define AUTO_CHAMBER_IS_1 (CHAMBER_AUTO_FAN_PIN == E1_AUTO_FAN_PIN)
+#define AUTO_CHAMBER_IS_2 (CHAMBER_AUTO_FAN_PIN == E2_AUTO_FAN_PIN)
+#define AUTO_CHAMBER_IS_3 (CHAMBER_AUTO_FAN_PIN == E3_AUTO_FAN_PIN)
+#define AUTO_CHAMBER_IS_4 (CHAMBER_AUTO_FAN_PIN == E4_AUTO_FAN_PIN)
+#define AUTO_CHAMBER_IS_5 (CHAMBER_AUTO_FAN_PIN == E5_AUTO_FAN_PIN)
 
 // Other fans
 #define HAS_FAN0 (PIN_EXISTS(FAN))
-#define HAS_FAN1 (PIN_EXISTS(FAN1) && CONTROLLER_FAN_PIN != FAN1_PIN && E0_AUTO_FAN_PIN != FAN1_PIN && E1_AUTO_FAN_PIN != FAN1_PIN && E2_AUTO_FAN_PIN != FAN1_PIN && E3_AUTO_FAN_PIN != FAN1_PIN)
-#define HAS_FAN2 (PIN_EXISTS(FAN2) && CONTROLLER_FAN_PIN != FAN2_PIN && E0_AUTO_FAN_PIN != FAN2_PIN && E1_AUTO_FAN_PIN != FAN2_PIN && E2_AUTO_FAN_PIN != FAN2_PIN && E3_AUTO_FAN_PIN != FAN2_PIN)
+#define HAS_FAN1 (PIN_EXISTS(FAN1) && CONTROLLER_FAN_PIN != FAN1_PIN && E0_AUTO_FAN_PIN != FAN1_PIN && E1_AUTO_FAN_PIN != FAN1_PIN && E2_AUTO_FAN_PIN != FAN1_PIN && E3_AUTO_FAN_PIN != FAN1_PIN && E4_AUTO_FAN_PIN != FAN1_PIN && E5_AUTO_FAN_PIN != FAN1_PIN)
+#define HAS_FAN2 (PIN_EXISTS(FAN2) && CONTROLLER_FAN_PIN != FAN2_PIN && E0_AUTO_FAN_PIN != FAN2_PIN && E1_AUTO_FAN_PIN != FAN2_PIN && E2_AUTO_FAN_PIN != FAN2_PIN && E3_AUTO_FAN_PIN != FAN2_PIN && E4_AUTO_FAN_PIN != FAN2_PIN && E5_AUTO_FAN_PIN != FAN2_PIN)
 #define HAS_CONTROLLER_FAN (PIN_EXISTS(CONTROLLER_FAN))
 
 // Servos
-#define HAS_SERVOS (defined(NUM_SERVOS) && NUM_SERVOS > 0)
 #define HAS_SERVO_0 (PIN_EXISTS(SERVO0))
 #define HAS_SERVO_1 (PIN_EXISTS(SERVO1))
 #define HAS_SERVO_2 (PIN_EXISTS(SERVO2))
 #define HAS_SERVO_3 (PIN_EXISTS(SERVO3))
+#define HAS_SERVOS (defined(NUM_SERVOS) && NUM_SERVOS > 0)
+
+#if HAS_SERVOS && !defined(Z_PROBE_SERVO_NR)
+  #define Z_PROBE_SERVO_NR -1
+#endif
+
+#define HAS_SERVO_ANGLES (ENABLED(SWITCHING_EXTRUDER) || ENABLED(SWITCHING_NOZZLE) || (HAS_Z_SERVO_PROBE && defined(Z_PROBE_SERVO_NR)))
+
+#if !HAS_SERVO_ANGLES
+  #undef EDITABLE_SERVO_ANGLES
+#endif
 
 // Sensors
 #define HAS_FILAMENT_WIDTH_SENSOR (PIN_EXISTS(FILWIDTH))
@@ -812,10 +995,62 @@
 #define HAS_CASE_LIGHT (PIN_EXISTS(CASE_LIGHT) && ENABLED(CASE_LIGHT_ENABLE))
 
 // Digital control
-#define HAS_MICROSTEPS (HAS_X_MICROSTEPS || HAS_Y_MICROSTEPS || HAS_Z_MICROSTEPS || HAS_E0_MICROSTEPS || HAS_E1_MICROSTEPS || HAS_E2_MICROSTEPS || HAS_E3_MICROSTEPS || HAS_E4_MICROSTEPS)
 #define HAS_STEPPER_RESET (PIN_EXISTS(STEPPER_RESET))
 #define HAS_DIGIPOTSS (PIN_EXISTS(DIGIPOTSS))
-#define HAS_MOTOR_CURRENT_PWM (PIN_EXISTS(MOTOR_CURRENT_PWM_XY) || PIN_EXISTS(MOTOR_CURRENT_PWM_Z) || PIN_EXISTS(MOTOR_CURRENT_PWM_E))
+#define HAS_MOTOR_CURRENT_PWM (PIN_EXISTS(MOTOR_CURRENT_PWM_X) || PIN_EXISTS(MOTOR_CURRENT_PWM_Y) || PIN_EXISTS(MOTOR_CURRENT_PWM_XY) || PIN_EXISTS(MOTOR_CURRENT_PWM_Z) || PIN_EXISTS(MOTOR_CURRENT_PWM_E))
+
+#define HAS_MICROSTEPS (HAS_X_MICROSTEPS || HAS_X2_MICROSTEPS || HAS_Y_MICROSTEPS || HAS_Y2_MICROSTEPS || HAS_Z_MICROSTEPS || HAS_Z2_MICROSTEPS || HAS_Z3_MICROSTEPS || HAS_E0_MICROSTEPS || HAS_E1_MICROSTEPS || HAS_E2_MICROSTEPS || HAS_E3_MICROSTEPS || HAS_E4_MICROSTEPS || HAS_E5_MICROSTEPS)
+
+#if HAS_MICROSTEPS
+
+  // MS1 MS2 MS3 Stepper Driver Microstepping mode table
+  #ifndef MICROSTEP1
+    #define MICROSTEP1 LOW,LOW,LOW
+  #endif
+  #if ENABLED(HEROIC_STEPPER_DRIVERS)
+    #ifndef MICROSTEP128
+      #define MICROSTEP128 LOW,HIGH,LOW
+    #endif
+  #else
+    #ifndef MICROSTEP2
+      #define MICROSTEP2 HIGH,LOW,LOW
+    #endif
+    #ifndef MICROSTEP4
+      #define MICROSTEP4 LOW,HIGH,LOW
+    #endif
+  #endif
+  #ifndef MICROSTEP8
+    #define MICROSTEP8 HIGH,HIGH,LOW
+  #endif
+  #ifdef __SAM3X8E__
+    #if MB(ALLIGATOR)
+      #ifndef MICROSTEP16
+        #define MICROSTEP16 LOW,LOW,LOW
+      #endif
+      #ifndef MICROSTEP32
+        #define MICROSTEP32 HIGH,HIGH,LOW
+      #endif
+    #else
+      #ifndef MICROSTEP16
+        #define MICROSTEP16 HIGH,HIGH,LOW
+      #endif
+    #endif
+  #else
+    #ifndef MICROSTEP16
+      #define MICROSTEP16 HIGH,HIGH,LOW
+    #endif
+  #endif
+
+  #define HAS_MICROSTEP1 defined(MICROSTEP1)
+  #define HAS_MICROSTEP2 defined(MICROSTEP2)
+  #define HAS_MICROSTEP4 defined(MICROSTEP4)
+  #define HAS_MICROSTEP8 defined(MICROSTEP8)
+  #define HAS_MICROSTEP16 defined(MICROSTEP16)
+  #define HAS_MICROSTEP32 defined(MICROSTEP32)
+  #define HAS_MICROSTEP64 defined(MICROSTEP64)
+  #define HAS_MICROSTEP128 defined(MICROSTEP128)
+
+#endif // HAS_MICROSTEPS
 
 #if !HAS_TEMP_SENSOR
   #undef AUTO_REPORT_TEMPERATURES
@@ -832,17 +1067,45 @@
 #endif
 
 /**
+ * Heater signal inversion defaults
+ */
+
+#if HAS_HEATER_0 && !defined(HEATER_0_INVERTING)
+  #define HEATER_0_INVERTING false
+#endif
+
+#if HAS_HEATER_1 && !defined(HEATER_1_INVERTING)
+  #define HEATER_1_INVERTING false
+#endif
+
+#if HAS_HEATER_2 && !defined(HEATER_2_INVERTING)
+  #define HEATER_2_INVERTING false
+#endif
+
+#if HAS_HEATER_3 && !defined(HEATER_3_INVERTING)
+  #define HEATER_3_INVERTING false
+#endif
+
+#if HAS_HEATER_4 && !defined(HEATER_4_INVERTING)
+  #define HEATER_4_INVERTING false
+#endif
+
+/**
  * Helper Macros for heaters and extruder fan
  */
-#define WRITE_HEATER_0P(v) WRITE(HEATER_0_PIN, v)
+
+#define WRITE_HEATER_0P(v) WRITE(HEATER_0_PIN, (v) ^ HEATER_0_INVERTING)
 #if HOTENDS > 1 || ENABLED(HEATERS_PARALLEL)
-  #define WRITE_HEATER_1(v) WRITE(HEATER_1_PIN, v)
+  #define WRITE_HEATER_1(v) WRITE(HEATER_1_PIN, (v) ^ HEATER_1_INVERTING)
   #if HOTENDS > 2
-    #define WRITE_HEATER_2(v) WRITE(HEATER_2_PIN, v)
+    #define WRITE_HEATER_2(v) WRITE(HEATER_2_PIN, (v) ^ HEATER_2_INVERTING)
     #if HOTENDS > 3
-      #define WRITE_HEATER_3(v) WRITE(HEATER_3_PIN, v)
+      #define WRITE_HEATER_3(v) WRITE(HEATER_3_PIN, (v) ^ HEATER_3_INVERTING)
       #if HOTENDS > 4
-        #define WRITE_HEATER_4(v) WRITE(HEATER_4_PIN, v)
+        #define WRITE_HEATER_4(v) WRITE(HEATER_4_PIN, (v) ^ HEATER_4_INVERTING)
+        #if HOTENDS > 5
+          #define WRITE_HEATER_5(v) WRITE(HEATER_5_PIN, (v) ^ HEATER_5_INVERTING)
+        #endif // HOTENDS > 5
       #endif // HOTENDS > 4
     #endif // HOTENDS > 3
   #endif // HOTENDS > 2
@@ -856,7 +1119,7 @@
 /**
  * Heated bed requires settings
  */
-#if HAS_HEATER_BED
+#if HAS_HEATED_BED
   #ifndef MAX_BED_POWER
     #define MAX_BED_POWER 255
   #endif
@@ -897,19 +1160,20 @@
 #define HAS_FANMUX PIN_EXISTS(FANMUX0)
 
 /**
- * Servos and probes
+ * MIN/MAX fan PWM scaling
  */
-
-#if HAS_SERVOS
-  #ifndef Z_ENDSTOP_SERVO_NR
-    #define Z_ENDSTOP_SERVO_NR -1
-  #endif
+#ifndef FAN_MIN_PWM
+  #define FAN_MIN_PWM 0
 #endif
-
-#define HAS_BED_PROBE (PROBE_SELECTED && DISABLED(PROBE_MANUALLY))
-
-#if ENABLED(Z_PROBE_ALLEN_KEY)
-  #define PROBE_IS_TRIGGERED_WHEN_STOWED_TEST
+#ifndef FAN_MAX_PWM
+  #define FAN_MAX_PWM 255
+#endif
+#if FAN_MIN_PWM < 0 || FAN_MIN_PWM > 255
+  #error "FAN_MIN_PWM must be a value from 0 to 255."
+#elif FAN_MAX_PWM < 0 || FAN_MAX_PWM > 255
+  #error "FAN_MAX_PWM must be a value from 0 to 255."
+#elif FAN_MIN_PWM > FAN_MAX_PWM
+  #error "FAN_MIN_PWM must be less than or equal to FAN_MAX_PWM."
 #endif
 
 /**
@@ -953,45 +1217,69 @@
   #define _SKEW_FACTOR(a,b,c) _SKEW_SIDE(float(a),_GET_SIDE(float(a),float(b),float(c)),float(c))
 
   #ifndef XY_SKEW_FACTOR
-    constexpr float XY_SKEW_FACTOR = (
-      #if defined(XY_DIAG_AC) && defined(XY_DIAG_BD) && defined(XY_SIDE_AD)
-        _SKEW_FACTOR(XY_DIAG_AC, XY_DIAG_BD, XY_SIDE_AD)
-      #else
-        0.0
-      #endif
-    );
+    #if defined(XY_DIAG_AC) && defined(XY_DIAG_BD) && defined(XY_SIDE_AD)
+      #define XY_SKEW_FACTOR _SKEW_FACTOR(XY_DIAG_AC, XY_DIAG_BD, XY_SIDE_AD)
+    #else
+      #define XY_SKEW_FACTOR 0.0
+    #endif
   #endif
   #ifndef XZ_SKEW_FACTOR
     #if defined(XY_SIDE_AD) && !defined(XZ_SIDE_AD)
       #define XZ_SIDE_AD XY_SIDE_AD
     #endif
-    constexpr float XZ_SKEW_FACTOR = (
-      #if defined(XZ_DIAG_AC) && defined(XZ_DIAG_BD) && defined(XZ_SIDE_AD)
-        _SKEW_FACTOR(XZ_DIAG_AC, XZ_DIAG_BD, XZ_SIDE_AD)
-      #else
-        0.0
-      #endif
-    );
+    #if defined(XZ_DIAG_AC) && defined(XZ_DIAG_BD) && defined(XZ_SIDE_AD)
+      #define XZ_SKEW_FACTOR _SKEW_FACTOR(XZ_DIAG_AC, XZ_DIAG_BD, XZ_SIDE_AD)
+    #else
+      #define XZ_SKEW_FACTOR 0.0
+    #endif
   #endif
   #ifndef YZ_SKEW_FACTOR
-    constexpr float YZ_SKEW_FACTOR = (
-      #if defined(YZ_DIAG_AC) && defined(YZ_DIAG_BD) && defined(YZ_SIDE_AD)
-        _SKEW_FACTOR(YZ_DIAG_AC, YZ_DIAG_BD, YZ_SIDE_AD)
-      #else
-        0.0
-      #endif
-    );
+    #if defined(YZ_DIAG_AC) && defined(YZ_DIAG_BD) && defined(YZ_SIDE_AD)
+      #define YZ_SKEW_FACTOR _SKEW_FACTOR(YZ_DIAG_AC, YZ_DIAG_BD, YZ_SIDE_AD)
+    #else
+      #define YZ_SKEW_FACTOR 0.0
+    #endif
   #endif
 #endif // SKEW_CORRECTION
 
 /**
- * Heater & Fan Pausing
+ * Set granular options based on the specific type of leveling
+ */
+#define UBL_SEGMENTED  (ENABLED(AUTO_BED_LEVELING_UBL) && (ENABLED(DELTA)))
+#define ABL_PLANAR     (ENABLED(AUTO_BED_LEVELING_LINEAR) || ENABLED(AUTO_BED_LEVELING_3POINT))
+#define ABL_GRID       (ENABLED(AUTO_BED_LEVELING_LINEAR) || ENABLED(AUTO_BED_LEVELING_BILINEAR))
+#define OLDSCHOOL_ABL  (ABL_PLANAR || ABL_GRID)
+#define HAS_ABL        (OLDSCHOOL_ABL || ENABLED(AUTO_BED_LEVELING_UBL))
+#define HAS_LEVELING   (HAS_ABL || ENABLED(MESH_BED_LEVELING))
+#define HAS_AUTOLEVEL  (HAS_ABL && DISABLED(PROBE_MANUALLY))
+#define HAS_MESH       (ENABLED(AUTO_BED_LEVELING_BILINEAR) || ENABLED(AUTO_BED_LEVELING_UBL) || ENABLED(MESH_BED_LEVELING))
+#define PLANNER_LEVELING      (HAS_LEVELING && DISABLED(AUTO_BED_LEVELING_UBL))
+#define HAS_PROBING_PROCEDURE (HAS_ABL || ENABLED(Z_MIN_PROBE_REPEATABILITY_TEST))
+#define HAS_POSITION_MODIFIERS (ENABLED(FWRETRACT) || HAS_LEVELING || ENABLED(SKEW_CORRECTION))
+
+#if ENABLED(AUTO_BED_LEVELING_UBL)
+  #undef LCD_BED_LEVELING
+#endif
+
+/**
+ * Heater, Fan, and Probe interactions
  */
 #if FAN_COUNT == 0
   #undef PROBING_FANS_OFF
+  #undef ADAPTIVE_FAN_SLOWING
+  #undef NO_FAN_SLOWING_IN_PID_TUNING
 #endif
+
 #define QUIET_PROBING (HAS_BED_PROBE && (ENABLED(PROBING_HEATERS_OFF) || ENABLED(PROBING_FANS_OFF) || DELAY_BEFORE_PROBING > 0))
 #define HEATER_IDLE_HANDLER (ENABLED(ADVANCED_PAUSE_FEATURE) || ENABLED(PROBING_HEATERS_OFF))
+
+#if ENABLED(ADVANCED_PAUSE_FEATURE) && !defined(FILAMENT_CHANGE_SLOW_LOAD_LENGTH)
+  #define FILAMENT_CHANGE_SLOW_LOAD_LENGTH 0
+#endif
+
+#if EXTRUDERS > 1 && !defined(TOOLCHANGE_FIL_EXTRA_PRIME)
+  #define TOOLCHANGE_FIL_EXTRA_PRIME 0
+#endif
 
 /**
  * Only constrain Z on DELTA / SCARA machines
@@ -1004,14 +1292,25 @@
 #endif
 
 /**
- * Delta radius/rod trimmers/angle trimmers
+ * Bed Probing rectangular bounds
+ * These can be further constrained in code for Delta and SCARA
  */
+
+#ifndef MIN_PROBE_EDGE
+  #define MIN_PROBE_EDGE 0
+#endif
+
 #if ENABLED(DELTA)
-  #ifndef DELTA_PROBEABLE_RADIUS
-    #define DELTA_PROBEABLE_RADIUS DELTA_PRINTABLE_RADIUS
-  #endif
+  /**
+   * Delta radius/rod trimmers/angle trimmers
+   */
+  #define _PROBE_RADIUS (DELTA_PRINTABLE_RADIUS - (MIN_PROBE_EDGE))
   #ifndef DELTA_CALIBRATION_RADIUS
-    #define DELTA_CALIBRATION_RADIUS DELTA_PRINTABLE_RADIUS - 10
+    #ifdef X_PROBE_OFFSET_FROM_EXTRUDER
+      #define DELTA_CALIBRATION_RADIUS (DELTA_PRINTABLE_RADIUS - MAX(ABS(X_PROBE_OFFSET_FROM_EXTRUDER), ABS(Y_PROBE_OFFSET_FROM_EXTRUDER), ABS(MIN_PROBE_EDGE)))
+    #else
+      #define DELTA_CALIBRATION_RADIUS _PROBE_RADIUS
+    #endif
   #endif
   #ifndef DELTA_ENDSTOP_ADJ
     #define DELTA_ENDSTOP_ADJ { 0, 0, 0 }
@@ -1025,57 +1324,39 @@
   #ifndef DELTA_DIAGONAL_ROD_TRIM_TOWER
     #define DELTA_DIAGONAL_ROD_TRIM_TOWER {0, 0, 0}
   #endif
-#endif
 
-/**
- * Set granular options based on the specific type of leveling
- */
-#define UBL_SEGMENTED  (ENABLED(AUTO_BED_LEVELING_UBL) && (ENABLED(DELTA)))
-#define ABL_PLANAR     (ENABLED(AUTO_BED_LEVELING_LINEAR) || ENABLED(AUTO_BED_LEVELING_3POINT))
-#define ABL_GRID       (ENABLED(AUTO_BED_LEVELING_LINEAR) || ENABLED(AUTO_BED_LEVELING_BILINEAR))
-#define OLDSCHOOL_ABL  (ABL_PLANAR || ABL_GRID)
-#define HAS_ABL        (OLDSCHOOL_ABL || ENABLED(AUTO_BED_LEVELING_UBL))
-#define HAS_LEVELING   (HAS_ABL || ENABLED(MESH_BED_LEVELING))
-#define HAS_AUTOLEVEL  (HAS_ABL && DISABLED(PROBE_MANUALLY))
-#define HAS_MESH       (ENABLED(AUTO_BED_LEVELING_BILINEAR) || ENABLED(AUTO_BED_LEVELING_UBL) || ENABLED(MESH_BED_LEVELING))
-#define PLANNER_LEVELING      (OLDSCHOOL_ABL || ENABLED(MESH_BED_LEVELING) || UBL_SEGMENTED || ENABLED(SKEW_CORRECTION))
-#define HAS_PROBING_PROCEDURE (HAS_ABL || ENABLED(Z_MIN_PROBE_REPEATABILITY_TEST))
-#if HAS_PROBING_PROCEDURE
-  #define PROBE_BED_WIDTH abs(RIGHT_PROBE_BED_POSITION - (LEFT_PROBE_BED_POSITION))
-  #define PROBE_BED_HEIGHT abs(BACK_PROBE_BED_POSITION - (FRONT_PROBE_BED_POSITION))
+  // Probing points may be verified at compile time within the radius
+  // using static_assert(HYPOT2(X2-X1,Y2-Y1)<=sq(DELTA_PRINTABLE_RADIUS),"bad probe point!")
+  // so that may be added to SanityCheck.h in the future.
+  #define _MIN_PROBE_X (X_CENTER - (_PROBE_RADIUS))
+  #define _MIN_PROBE_Y (Y_CENTER - (_PROBE_RADIUS))
+  #define _MAX_PROBE_X (X_CENTER + _PROBE_RADIUS)
+  #define _MAX_PROBE_Y (Y_CENTER + _PROBE_RADIUS)
+
+#elif IS_SCARA
+
+  #define SCARA_PRINTABLE_RADIUS (SCARA_LINKAGE_1 + SCARA_LINKAGE_2)
+  #define _PROBE_RADIUS (SCARA_PRINTABLE_RADIUS - (MIN_PROBE_EDGE))
+  #define _MIN_PROBE_X (X_CENTER - (SCARA_PRINTABLE_RADIUS) + MIN_PROBE_EDGE)
+  #define _MIN_PROBE_Y (Y_CENTER - (SCARA_PRINTABLE_RADIUS) + MIN_PROBE_EDGE)
+  #define _MAX_PROBE_X (X_CENTER +  SCARA_PRINTABLE_RADIUS - (MIN_PROBE_EDGE))
+  #define _MAX_PROBE_Y (Y_CENTER +  SCARA_PRINTABLE_RADIUS - (MIN_PROBE_EDGE))
+
+#else
+
+  // Boundaries for Cartesian probing based on bed limits
+  #define _MIN_PROBE_X (MAX(X_MIN_BED + MIN_PROBE_EDGE, X_MIN_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
+  #define _MIN_PROBE_Y (MAX(Y_MIN_BED + MIN_PROBE_EDGE, Y_MIN_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
+  #define _MAX_PROBE_X (MIN(X_MAX_BED - (MIN_PROBE_EDGE), X_MAX_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
+  #define _MAX_PROBE_Y (MIN(Y_MAX_BED - (MIN_PROBE_EDGE), Y_MAX_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
+
 #endif
 
 #if ENABLED(SEGMENT_LEVELED_MOVES) && !defined(LEVELED_SEGMENT_LENGTH)
   #define LEVELED_SEGMENT_LENGTH 5
 #endif
 
-/**
- * Bed Probing rectangular bounds
- * These can be further constrained in code for Delta and SCARA
- */
-#if ENABLED(DELTA)
-  // Probing points may be verified at compile time within the radius
-  // using static_assert(HYPOT2(X2-X1,Y2-Y1)<=sq(DELTA_PRINTABLE_RADIUS),"bad probe point!")
-  // so that may be added to SanityCheck.h in the future.
-  #define _MIN_PROBE_X (X_CENTER - DELTA_PRINTABLE_RADIUS)
-  #define _MIN_PROBE_Y (Y_CENTER - DELTA_PRINTABLE_RADIUS)
-  #define _MAX_PROBE_X (X_CENTER + DELTA_PRINTABLE_RADIUS)
-  #define _MAX_PROBE_Y (Y_CENTER + DELTA_PRINTABLE_RADIUS)
-#elif IS_SCARA
-  #define SCARA_PRINTABLE_RADIUS (SCARA_LINKAGE_1 + SCARA_LINKAGE_2)
-  #define _MIN_PROBE_X (X_CENTER - (SCARA_PRINTABLE_RADIUS))
-  #define _MIN_PROBE_Y (Y_CENTER - (SCARA_PRINTABLE_RADIUS))
-  #define _MAX_PROBE_X (X_CENTER +  SCARA_PRINTABLE_RADIUS)
-  #define _MAX_PROBE_Y (Y_CENTER +  SCARA_PRINTABLE_RADIUS)
-#else
-  // Boundaries for Cartesian probing based on bed limits
-  #define _MIN_PROBE_X (max(X_MIN_BED, X_MIN_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
-  #define _MIN_PROBE_Y (max(Y_MIN_BED, Y_MIN_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
-  #define _MAX_PROBE_X (min(X_MAX_BED, X_MAX_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
-  #define _MAX_PROBE_Y (min(Y_MAX_BED, Y_MAX_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
-#endif
-
-// Allow configuration to override these for special purposes
+// These may be overridden in Configuration.h if a smaller area is desired
 #ifndef MIN_PROBE_X
   #define MIN_PROBE_X _MIN_PROBE_X
 #endif
@@ -1097,42 +1378,103 @@
     // Probing points may be verified at compile time within the radius
     // using static_assert(HYPOT2(X2-X1,Y2-Y1)<=sq(DELTA_PRINTABLE_RADIUS),"bad probe point!")
     // so that may be added to SanityCheck.h in the future.
-    #define _MESH_MIN_X (MIN_PROBE_X + MESH_INSET)
-    #define _MESH_MIN_Y (MIN_PROBE_Y + MESH_INSET)
-    #define _MESH_MAX_X (MAX_PROBE_X - (MESH_INSET))
-    #define _MESH_MAX_Y (MAX_PROBE_Y - (MESH_INSET))
+    #define _MESH_MIN_X (X_MIN_BED + MESH_INSET)
+    #define _MESH_MIN_Y (Y_MIN_BED + MESH_INSET)
+    #define _MESH_MAX_X (X_MAX_BED - (MESH_INSET))
+    #define _MESH_MAX_Y (Y_MAX_BED - (MESH_INSET))
   #else
     // Boundaries for Cartesian probing based on set limits
     #if ENABLED(AUTO_BED_LEVELING_UBL)
-      #define _MESH_MIN_X (max(X_MIN_BED + MESH_INSET, X_MIN_POS))  // UBL is careful not to probe off the bed.  It does not
-      #define _MESH_MIN_Y (max(Y_MIN_BED + MESH_INSET, Y_MIN_POS))  // need *_PROBE_OFFSET_FROM_EXTRUDER in the mesh dimensions
-      #define _MESH_MAX_X (min(X_MAX_BED - (MESH_INSET), X_MAX_POS))
-      #define _MESH_MAX_Y (min(Y_MAX_BED - (MESH_INSET), Y_MAX_POS))
+      #define _MESH_MIN_X (MAX(X_MIN_BED + MESH_INSET, X_MIN_POS))  // UBL is careful not to probe off the bed.  It does not
+      #define _MESH_MIN_Y (MAX(Y_MIN_BED + MESH_INSET, Y_MIN_POS))  // need *_PROBE_OFFSET_FROM_EXTRUDER in the mesh dimensions
+      #define _MESH_MAX_X (MIN(X_MAX_BED - (MESH_INSET), X_MAX_POS))
+      #define _MESH_MAX_Y (MIN(Y_MAX_BED - (MESH_INSET), Y_MAX_POS))
     #else
-      #define _MESH_MIN_X (max(X_MIN_BED + MESH_INSET, X_MIN_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
-      #define _MESH_MIN_Y (max(Y_MIN_BED + MESH_INSET, Y_MIN_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
-      #define _MESH_MAX_X (min(X_MAX_BED - (MESH_INSET), X_MAX_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
-      #define _MESH_MAX_Y (min(Y_MAX_BED - (MESH_INSET), Y_MAX_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
+      #define _MESH_MIN_X (MAX(X_MIN_BED + MESH_INSET, X_MIN_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
+      #define _MESH_MIN_Y (MAX(Y_MIN_BED + MESH_INSET, Y_MIN_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
+      #define _MESH_MAX_X (MIN(X_MAX_BED - (MESH_INSET), X_MAX_POS + X_PROBE_OFFSET_FROM_EXTRUDER))
+      #define _MESH_MAX_Y (MIN(Y_MAX_BED - (MESH_INSET), Y_MAX_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
     #endif
   #endif
-  /**
-   * These may be overridden in Configuration if a smaller area is wanted
-   */
-  #if ENABLED(MESH_BED_LEVELING) || ENABLED(AUTO_BED_LEVELING_UBL)
-    #ifndef MESH_MIN_X
-      #define MESH_MIN_X _MESH_MIN_X
-    #endif
-    #ifndef MESH_MIN_Y
-      #define MESH_MIN_Y _MESH_MIN_Y
-    #endif
-    #ifndef MESH_MAX_X
-      #define MESH_MAX_X _MESH_MAX_X
-    #endif
-    #ifndef MESH_MAX_Y
-      #define MESH_MAX_Y _MESH_MAX_Y
-    #endif
+
+  // These may be overridden in Configuration.h if a smaller area is desired
+  #ifndef MESH_MIN_X
+    #define MESH_MIN_X _MESH_MIN_X
   #endif
+  #ifndef MESH_MIN_Y
+    #define MESH_MIN_Y _MESH_MIN_Y
+  #endif
+  #ifndef MESH_MAX_X
+    #define MESH_MAX_X _MESH_MAX_X
+  #endif
+  #ifndef MESH_MAX_Y
+    #define MESH_MAX_Y _MESH_MAX_Y
+  #endif
+
 #endif // MESH_BED_LEVELING || AUTO_BED_LEVELING_UBL
+
+#if ENABLED(AUTO_BED_LEVELING_UBL) || ENABLED(AUTO_BED_LEVELING_3POINT)
+  #if IS_KINEMATIC
+    #define SIN0    0.0
+    #define SIN120  0.866025
+    #define SIN240 -0.866025
+    #define COS0    1.0
+    #define COS120 -0.5
+    #define COS240 -0.5
+    #ifndef PROBE_PT_1_X
+      #define PROBE_PT_1_X (X_CENTER + (_PROBE_RADIUS) * COS0)
+    #endif
+    #ifndef PROBE_PT_1_Y
+      #define PROBE_PT_1_Y (Y_CENTER + (_PROBE_RADIUS) * SIN0)
+    #endif
+    #ifndef PROBE_PT_2_X
+      #define PROBE_PT_2_X (X_CENTER + (_PROBE_RADIUS) * COS120)
+    #endif
+    #ifndef PROBE_PT_2_Y
+      #define PROBE_PT_2_Y (Y_CENTER + (_PROBE_RADIUS) * SIN120)
+    #endif
+    #ifndef PROBE_PT_3_X
+      #define PROBE_PT_3_X (X_CENTER + (_PROBE_RADIUS) * COS240)
+    #endif
+    #ifndef PROBE_PT_3_Y
+      #define PROBE_PT_3_Y (Y_CENTER + (_PROBE_RADIUS) * SIN240)
+    #endif
+  #else
+    #ifndef PROBE_PT_1_X
+      #define PROBE_PT_1_X MIN_PROBE_X
+    #endif
+    #ifndef PROBE_PT_1_Y
+      #define PROBE_PT_1_Y MIN_PROBE_Y
+    #endif
+    #ifndef PROBE_PT_2_X
+      #define PROBE_PT_2_X MAX_PROBE_X
+    #endif
+    #ifndef PROBE_PT_2_Y
+      #define PROBE_PT_2_Y MIN_PROBE_Y
+    #endif
+    #ifndef PROBE_PT_3_X
+      #define PROBE_PT_3_X X_CENTER
+    #endif
+    #ifndef PROBE_PT_3_Y
+      #define PROBE_PT_3_Y MAX_PROBE_Y
+    #endif
+  #endif
+#endif
+
+#if ENABLED(AUTO_BED_LEVELING_LINEAR) || ENABLED(AUTO_BED_LEVELING_BILINEAR)
+  #ifndef LEFT_PROBE_BED_POSITION
+    #define LEFT_PROBE_BED_POSITION MIN_PROBE_X
+  #endif
+  #ifndef RIGHT_PROBE_BED_POSITION
+    #define RIGHT_PROBE_BED_POSITION MAX_PROBE_X
+  #endif
+  #ifndef FRONT_PROBE_BED_POSITION
+    #define FRONT_PROBE_BED_POSITION MIN_PROBE_Y
+  #endif
+  #ifndef BACK_PROBE_BED_POSITION
+    #define BACK_PROBE_BED_POSITION MAX_PROBE_Y
+  #endif
+#endif
 
 /**
  * Buzzer/Speaker
@@ -1175,21 +1517,18 @@
     #define Z_HOMING_HEIGHT Z_CLEARANCE_BETWEEN_PROBES
   #endif
 #endif
-#ifndef Z_CLEARANCE_BETWEEN_PROBES
-  #define Z_CLEARANCE_BETWEEN_PROBES Z_HOMING_HEIGHT
-#endif
-#if Z_CLEARANCE_BETWEEN_PROBES > Z_HOMING_HEIGHT
-  #define MANUAL_PROBE_HEIGHT Z_CLEARANCE_BETWEEN_PROBES
-#else
-  #define MANUAL_PROBE_HEIGHT Z_HOMING_HEIGHT
-#endif
 
-// Stepper pulse duration, in cycles
-#define STEP_PULSE_CYCLES ((MINIMUM_STEPPER_PULSE) * CYCLES_PER_MICROSECOND)
-#ifdef CPU_32_BIT
-  // Add additional delay for between direction signal and pulse signal of stepper
-  #ifndef STEPPER_DIRECTION_DELAY
-    #define STEPPER_DIRECTION_DELAY 0 // time in microseconds
+#if PROBE_SELECTED
+  #ifndef Z_CLEARANCE_BETWEEN_PROBES
+    #define Z_CLEARANCE_BETWEEN_PROBES Z_HOMING_HEIGHT
+  #endif
+  #if Z_CLEARANCE_BETWEEN_PROBES > Z_HOMING_HEIGHT
+    #define MANUAL_PROBE_HEIGHT Z_CLEARANCE_BETWEEN_PROBES
+  #else
+    #define MANUAL_PROBE_HEIGHT Z_HOMING_HEIGHT
+  #endif
+  #ifndef Z_CLEARANCE_MULTI_PROBE
+    #define Z_CLEARANCE_MULTI_PROBE Z_CLEARANCE_BETWEEN_PROBES
   #endif
 #endif
 
@@ -1202,22 +1541,21 @@
 // Updated G92 behavior shifts the workspace
 #define HAS_POSITION_SHIFT DISABLED(NO_WORKSPACE_OFFSETS)
 // The home offset also shifts the coordinate space
-#define HAS_HOME_OFFSET (DISABLED(NO_WORKSPACE_OFFSETS) && DISABLED(DELTA))
-// Either offset yields extra calculations on all moves
-#define HAS_WORKSPACE_OFFSET (HAS_POSITION_SHIFT || HAS_HOME_OFFSET)
-// M206 doesn't apply to DELTA
-#define HAS_M206_COMMAND (HAS_HOME_OFFSET && DISABLED(DELTA))
+#define HAS_HOME_OFFSET (DISABLED(NO_WORKSPACE_OFFSETS) && IS_CARTESIAN)
+// The SCARA home offset applies only on G28
+#define HAS_SCARA_OFFSET (DISABLED(NO_WORKSPACE_OFFSETS) && IS_SCARA)
+// Cumulative offset to workspace to save some calculation
+#define HAS_WORKSPACE_OFFSET (HAS_POSITION_SHIFT && HAS_HOME_OFFSET)
+// M206 sets the home offset for Cartesian machines
+#define HAS_M206_COMMAND (HAS_HOME_OFFSET && !IS_SCARA)
 
 // LCD timeout to status screen default is 15s
 #ifndef LCD_TIMEOUT_TO_STATUS
   #define LCD_TIMEOUT_TO_STATUS 15000
 #endif
 
-// Shorthand
-#define GRID_MAX_POINTS ((GRID_MAX_POINTS_X) * (GRID_MAX_POINTS_Y))
-
 // Add commands that need sub-codes to this list
-#define USE_GCODE_SUBCODES ENABLED(G38_PROBE_TARGET) || ENABLED(CNC_COORDINATE_SYSTEMS)
+#define USE_GCODE_SUBCODES ENABLED(G38_PROBE_TARGET) || ENABLED(CNC_COORDINATE_SYSTEMS) || ENABLED(POWER_LOSS_RECOVERY)
 
 // Parking Extruder
 #if ENABLED(PARKING_EXTRUDER)
@@ -1227,36 +1565,6 @@
   #ifndef PARKING_EXTRUDER_SOLENOIDS_PINS_ACTIVE
     #define PARKING_EXTRUDER_SOLENOIDS_PINS_ACTIVE HIGH
   #endif
-#endif
-
-// Use float instead of double. Needs profiling.
-#if defined(ARDUINO_ARCH_SAM) && ENABLED(DELTA_FAST_SQRT)
-  #undef ATAN2
-  #undef FABS
-  #undef POW
-  #undef SQRT
-  #undef CEIL
-  #undef FLOOR
-  #undef LROUND
-  #undef FMOD
-  #define ATAN2(y, x) atan2f(y, x)
-  #define FABS(x) fabsf(x)
-  #define POW(x, y) powf(x, y)
-  #define SQRT(x) sqrtf(x)
-  #define CEIL(x) ceilf(x)
-  #define FLOOR(x) floorf(x)
-  #define LROUND(x) lroundf(x)
-  #define FMOD(x, y) fmodf(x, y)
-#endif
-
-#ifdef TEENSYDUINO
-  #undef max
-  #define max(a,b) ((a)>(b)?(a):(b))
-  #undef min
-  #define min(a,b) ((a)<(b)?(a):(b))
-
-  #undef NOT_A_PIN    // Override Teensyduino legacy CapSense define work-around
-  #define NOT_A_PIN 0 // For PINS_DEBUGGING
 #endif
 
 // Number of VFAT entries used. Each entry has 13 UTF-16 characters
@@ -1328,4 +1636,35 @@
   #define HAS_FOLDER_SORTING (FOLDER_SORTING || ENABLED(SDSORT_GCODE))
 #endif
 
-#endif // CONDITIONALS_POST_H
+// If platform requires early initialization of watchdog to properly boot
+#define EARLY_WATCHDOG (ENABLED(USE_WATCHDOG) && defined(ARDUINO_ARCH_SAM))
+
+#define USE_EXECUTE_COMMANDS_IMMEDIATE (ENABLED(G29_RETRY_AND_RECOVER) || ENABLED(GCODE_MACROS) || ENABLED(POWER_LOSS_RECOVERY) || HAS_DRIVER(L6470))
+
+#if ENABLED(Z_TRIPLE_STEPPER_DRIVERS)
+  #define Z_STEPPER_COUNT 3
+#elif ENABLED(Z_DUAL_STEPPER_DRIVERS)
+  #define Z_STEPPER_COUNT 2
+#else
+  #define Z_STEPPER_COUNT 1
+#endif
+
+// Get LCD character width/height, which may be overridden by pins, configs, etc.
+#ifndef LCD_WIDTH
+  #if HAS_GRAPHICAL_LCD
+    #define LCD_WIDTH 22
+  #elif ENABLED(ULTIPANEL)
+    #define LCD_WIDTH 20
+  #elif HAS_SPI_LCD
+    #define LCD_WIDTH 16
+  #endif
+#endif
+#ifndef LCD_HEIGHT
+  #if HAS_GRAPHICAL_LCD
+    #define LCD_HEIGHT 5
+  #elif ENABLED(ULTIPANEL)
+    #define LCD_HEIGHT 4
+  #elif HAS_SPI_LCD
+    #define LCD_HEIGHT 2
+  #endif
+#endif

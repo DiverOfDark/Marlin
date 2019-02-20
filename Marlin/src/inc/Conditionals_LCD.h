@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -19,16 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#pragma once
 
 /**
  * Conditionals_LCD.h
  * Conditionals that need to be set before Configuration_adv.h or pins.h
  */
-
-#ifndef CONDITIONALS_LCD_H // Get the LCD defines which are needed first
-#define CONDITIONALS_LCD_H
-
-#define LCD_HAS_DIRECTIONAL_BUTTONS (BUTTON_EXISTS(UP) || BUTTON_EXISTS(DWN) || BUTTON_EXISTS(LFT) || BUTTON_EXISTS(RT))
 
 #if ENABLED(CARTESIO_UI)
 
@@ -44,17 +40,17 @@
 
 #elif ENABLED(ZONESTAR_LCD)
 
+  #define ADC_KEYPAD
   #define REPRAPWORLD_KEYPAD
   #define REPRAPWORLD_KEYPAD_MOVE_STEP 10.0
-  #define ADC_KEYPAD
   #define ADC_KEY_NUM 8
   #define ULTIPANEL
 
   // this helps to implement ADC_KEYPAD menus
+  #define REVERSE_MENU_DIRECTION
   #define ENCODER_PULSES_PER_STEP 1
   #define ENCODER_STEPS_PER_MENU_ITEM 1
   #define ENCODER_FEEDRATE_DEADZONE 2
-  #define REVERSE_MENU_DIRECTION
 
 #elif ENABLED(RADDS_DISPLAY)
   #define ULTIPANEL
@@ -120,13 +116,13 @@
 
   #define REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER
   #ifndef ST7920_DELAY_1
-    #define ST7920_DELAY_1 DELAY_2_NOP
+    #define ST7920_DELAY_1 DELAY_NS(125)
   #endif
   #ifndef ST7920_DELAY_2
-    #define ST7920_DELAY_2 DELAY_2_NOP
+    #define ST7920_DELAY_2 DELAY_NS(125)
   #endif
   #ifndef ST7920_DELAY_3
-    #define ST7920_DELAY_3 DELAY_2_NOP
+    #define ST7920_DELAY_3 DELAY_NS(125)
   #endif
 
 #elif ENABLED(MKS_12864OLED)
@@ -200,6 +196,27 @@
     #define REPRAPWORLD_KEYPAD_MOVE_STEP 1.0
   #endif
 #endif
+
+/**
+ * SPI PANELS
+ */
+
+ // Einstart OLED has Cardinal nav via pins defined in pins_EINSTART-S.h
+ #if ENABLED(U8GLIB_SH1106_EINSTART)
+   #define ULTRA_LCD
+   #define DOGLCD
+   #define ULTIPANEL
+   #define NEWPANEL
+ #endif
+
+ /**
+  * FSMC/SPI TFT PANELS
+  */
+ #if ENABLED(MKS_ROBIN_TFT)
+   #define ULTRA_LCD
+   #define DOGLCD
+   #define ULTIPANEL
+ #endif
 
 /**
  * I2C PANELS
@@ -280,90 +297,47 @@
 // ---------------------
 // 2 wire Non-latching LCD SR from:
 // https://bitbucket.org/fmalpartida/new-liquidcrystal/wiki/schematics#!shiftregister-connection
+#if ENABLED(FF_INTERFACEBOARD)
+  #define SR_LCD_3W_NL    // Non latching 3 wire shift register
+  #define ULTIPANEL
+#endif
 
 #if ENABLED(SAV_3DLCD)
   #define SR_LCD_2W_NL    // Non latching 2 wire shift register
   #define ULTIPANEL
 #endif
 
-#if ENABLED(DOGLCD) // Change number of lines to match the DOG graphic display
-  #ifndef LCD_WIDTH
-    #ifdef LCD_WIDTH_OVERRIDE
-      #define LCD_WIDTH LCD_WIDTH_OVERRIDE
-    #else
-      #define LCD_WIDTH 22
-    #endif
-  #endif
-  #ifndef LCD_HEIGHT
-    #define LCD_HEIGHT 5
-  #endif
-#endif
-
 #if ENABLED(ULTIPANEL)
   #define NEWPANEL  // Disable this if you actually have no click-encoder panel
   #define ULTRA_LCD
-  #ifndef LCD_WIDTH
-    #define LCD_WIDTH 20
-  #endif
-  #ifndef LCD_HEIGHT
-    #define LCD_HEIGHT 4
-  #endif
-#elif ENABLED(ULTRA_LCD)  // no panel but just LCD
-  #ifndef LCD_WIDTH
-    #define LCD_WIDTH 16
-  #endif
-  #ifndef LCD_HEIGHT
-    #define LCD_HEIGHT 2
-  #endif
 #endif
 
-#if ENABLED(DOGLCD)
-  /* Custom characters defined in font dogm_font_data_Marlin_symbols.h / Marlin_symbols.fon */
-  // \x00 intentionally skipped to avoid problems in strings
-  #define LCD_STR_REFRESH     "\x01"
-  #define LCD_STR_FOLDER      "\x02"
-  #define LCD_STR_ARROW_RIGHT "\x03"
-  #define LCD_STR_UPLEVEL     "\x04"
-  #define LCD_STR_CLOCK       "\x05"
-  #define LCD_STR_FEEDRATE    "\x06"
-  #define LCD_STR_BEDTEMP     "\x07"
-  #define LCD_STR_THERMOMETER "\x08"
-  #define LCD_STR_DEGREE      "\x09"
+// Aliases for LCD features
+#define HAS_SPI_LCD          ENABLED(ULTRA_LCD)
+#define HAS_GRAPHICAL_LCD    ENABLED(DOGLCD)
+#define HAS_CHARACTER_LCD   (HAS_SPI_LCD && !HAS_GRAPHICAL_LCD)
+#define HAS_LCD_MENU        (ENABLED(ULTIPANEL) && DISABLED(NO_LCD_MENUS))
 
-  #define LCD_STR_SPECIAL_MAX '\x09'
-  // Maximum here is 0x1F because 0x20 is ' ' (space) and the normal charsets begin.
-  // Better stay below 0x10 because DISPLAY_CHARSET_HD44780_WESTERN begins here.
+#define HAS_ADC_BUTTONS     ENABLED(ADC_KEYPAD)
+#define HAS_DIGITAL_BUTTONS (!HAS_ADC_BUTTONS && ENABLED(NEWPANEL))
+#define HAS_SHIFT_ENCODER   (!HAS_ADC_BUTTONS && (ENABLED(REPRAPWORLD_KEYPAD) || (HAS_SPI_LCD && DISABLED(NEWPANEL))))
+#define HAS_ENCODER_WHEEL   (!HAS_ADC_BUTTONS && ENABLED(NEWPANEL))
 
-  // Symbol characters
-  #define LCD_STR_FILAM_DIA   "\xf8"
-  #define LCD_STR_FILAM_MUL   "\xa4"
-#else
-  // Custom characters defined in the first 8 characters of the LCD
-  #define LCD_BEDTEMP_CHAR     0x00  // Print only as a char. This will have 'unexpected' results when used in a string!
-  #define LCD_DEGREE_CHAR      0x01
-  #define LCD_STR_THERMOMETER "\x02" // Still used with string concatenation
-  #define LCD_UPLEVEL_CHAR     0x03
-  #define LCD_STR_REFRESH     "\x04"
-  #define LCD_STR_FOLDER      "\x05"
-  #define LCD_FEEDRATE_CHAR    0x06
-  #define LCD_CLOCK_CHAR       0x07
-  #define LCD_STR_ARROW_RIGHT ">"  /* from the default character set */
-#endif
+// I2C buttons must be read in the main thread
+#define HAS_SLOW_BUTTONS (ENABLED(LCD_I2C_VIKI) || ENABLED(LCD_I2C_PANELOLU2))
 
-/**
- * Default LCD contrast for dogm-like LCD displays
- */
-#if ENABLED(DOGLCD)
-
-  #define HAS_LCD_CONTRAST ( \
-      ENABLED(MAKRPANEL) \
-   || ENABLED(CARTESIO_UI) \
-   || ENABLED(VIKI2) \
-   || ENABLED(AZSMZ_12864) \
-   || ENABLED(miniVIKI) \
-   || ENABLED(ELB_FULL_GRAPHIC_CONTROLLER) \
+#if HAS_GRAPHICAL_LCD
+  /**
+   * Default LCD contrast for Graphical LCD displays
+   */
+  #define HAS_LCD_CONTRAST (                \
+       ENABLED(MAKRPANEL)                   \
+    || ENABLED(CARTESIO_UI)                 \
+    || ENABLED(VIKI2)                       \
+    || ENABLED(AZSMZ_12864)                 \
+    || ENABLED(miniVIKI)                    \
+    || ENABLED(ELB_FULL_GRAPHIC_CONTROLLER) \
   )
-
   #if HAS_LCD_CONTRAST
     #ifndef LCD_CONTRAST_MIN
       #define LCD_CONTRAST_MIN 0
@@ -378,17 +352,10 @@
 #endif
 
 // Boot screens
-#if DISABLED(ULTRA_LCD)
+#if !HAS_SPI_LCD
   #undef SHOW_BOOTSCREEN
 #elif !defined(BOOTSCREEN_TIMEOUT)
   #define BOOTSCREEN_TIMEOUT 2500
-#endif
-
-#define HAS_DEBUG_MENU ENABLED(LCD_PROGRESS_BAR_TEST)
-
-// MK2 Multiplexer forces SINGLENOZZLE to be enabled
-#if ENABLED(MK2_MULTIPLEXER)
-  #define SINGLENOZZLE
 #endif
 
 /**
@@ -401,55 +368,79 @@
  *  E_MANUAL     - Number of E steppers for LCD move options
  *
  */
+
+#if ENABLED(SWITCHING_EXTRUDER)   // One stepper for every two EXTRUDERS
+  #if EXTRUDERS > 4
+    #define E_STEPPERS    3
+  #elif EXTRUDERS > 2
+    #define E_STEPPERS    2
+  #else
+    #define E_STEPPERS    1
+  #endif
+  #if DISABLED(SWITCHING_NOZZLE)
+    #define HOTENDS       E_STEPPERS
+  #endif
+#elif ENABLED(MIXING_EXTRUDER)
+  #define E_STEPPERS      MIXING_STEPPERS
+  #define E_MANUAL        1
+  #define DUAL_MIXING_EXTRUDER (MIXING_STEPPERS == 2)
+#elif ENABLED(SWITCHING_TOOLHEAD)
+  #define E_STEPPERS      EXTRUDERS
+  #define E_MANUAL        EXTRUDERS
+#elif ENABLED(PRUSA_MMU2)
+  #define E_STEPPERS 1
+  #ifndef TOOLCHANGE_ZRAISE
+    #define TOOLCHANGE_ZRAISE 0
+  #endif
+#endif
+
+// No inactive extruders with MK2_MULTIPLEXER or SWITCHING_NOZZLE
+#if ENABLED(MK2_MULTIPLEXER) || ENABLED(SWITCHING_NOZZLE)
+  #undef DISABLE_INACTIVE_EXTRUDER
+#endif
+
+// Prusa MK2 Multiplexer and MMU 2.0 force SINGLENOZZLE
+#if ENABLED(MK2_MULTIPLEXER) || ENABLED(PRUSA_MMU2)
+  #define SINGLENOZZLE
+#endif
+
 #if ENABLED(SINGLENOZZLE) || ENABLED(MIXING_EXTRUDER)         // One hotend, one thermistor, no XY offset
+  #undef HOTENDS
   #define HOTENDS       1
   #undef TEMP_SENSOR_1_AS_REDUNDANT
   #undef HOTEND_OFFSET_X
   #undef HOTEND_OFFSET_Y
-#else                                                         // Two hotends
-  #define HOTENDS       EXTRUDERS
-  #if ENABLED(SWITCHING_NOZZLE) && !defined(HOTEND_OFFSET_Z)
-    #define HOTEND_OFFSET_Z { 0 }
-  #endif
+#endif
+
+#ifndef HOTENDS
+  #define HOTENDS EXTRUDERS
+#endif
+
+#ifndef E_STEPPERS
+  #define E_STEPPERS EXTRUDERS
+#endif
+
+#ifndef E_MANUAL
+  #define E_MANUAL EXTRUDERS
 #endif
 
 #define HOTEND_LOOP() for (int8_t e = 0; e < HOTENDS; e++)
 
-#if HOTENDS == 1
-  #define HOTEND_INDEX  0
-#else
-  #define HOTEND_INDEX  e
-#endif
+#define DO_SWITCH_EXTRUDER (ENABLED(SWITCHING_EXTRUDER) && (DISABLED(SWITCHING_NOZZLE) || SWITCHING_EXTRUDER_SERVO_NR != SWITCHING_NOZZLE_SERVO_NR))
+#define SWITCHING_NOZZLE_TWO_SERVOS defined(SWITCHING_NOZZLE_E1_SERVO_NR)
 
-#if ENABLED(SWITCHING_EXTRUDER)                               // One stepper for every two EXTRUDERS
-  #if EXTRUDERS > 4
-    #define E_STEPPERS    3
-    #define E_MANUAL      3
-  #elif EXTRUDERS > 2
-    #define E_STEPPERS    2
-    #define E_MANUAL      2
-  #else
-    #define E_STEPPERS    1
-  #endif
-  #define E_MANUAL        E_STEPPERS
-#elif ENABLED(MIXING_EXTRUDER)
-  #define E_STEPPERS      MIXING_STEPPERS
-  #define E_MANUAL        1
-#else
-  #define E_STEPPERS      EXTRUDERS
-  #define E_MANUAL        EXTRUDERS
-#endif
+#define HAS_HOTEND_OFFSET (HOTENDS > 1)
 
 /**
  * DISTINCT_E_FACTORS affects how some E factors are accessed
  */
 #if ENABLED(DISTINCT_E_FACTORS) && E_STEPPERS > 1
   #define XYZE_N (XYZ + E_STEPPERS)
-  #define E_AXIS_N (E_AXIS + extruder)
+  #define E_AXIS_N(E) (E_AXIS + E)
 #else
   #undef DISTINCT_E_FACTORS
   #define XYZE_N XYZE
-  #define E_AXIS_N E_AXIS
+  #define E_AXIS_N(E) E_AXIS
 #endif
 
 /**
@@ -457,11 +448,11 @@
  * and uses "special" angles for its state.
  */
 #if ENABLED(BLTOUCH)
-  #ifndef Z_ENDSTOP_SERVO_NR
-    #define Z_ENDSTOP_SERVO_NR 0
+  #ifndef Z_PROBE_SERVO_NR
+    #define Z_PROBE_SERVO_NR 0
   #endif
   #ifndef NUM_SERVOS
-    #define NUM_SERVOS (Z_ENDSTOP_SERVO_NR + 1)
+    #define NUM_SERVOS (Z_PROBE_SERVO_NR + 1)
   #endif
   #undef DEACTIVATE_SERVOS_AFTER_MOVE
   #if NUM_SERVOS == 1
@@ -493,26 +484,95 @@
   #endif
 #endif
 
+#ifndef PREHEAT_1_LABEL
+  #define PREHEAT_1_LABEL "PLA"
+#endif
+
+#ifndef PREHEAT_2_LABEL
+  #define PREHEAT_2_LABEL "ABS"
+#endif
+
 /**
  * Set a flag for a servo probe
  */
-#define HAS_Z_SERVO_ENDSTOP (defined(Z_ENDSTOP_SERVO_NR) && Z_ENDSTOP_SERVO_NR >= 0)
+#define HAS_Z_SERVO_PROBE (defined(Z_PROBE_SERVO_NR) && Z_PROBE_SERVO_NR >= 0)
 
 /**
- * Set a flag for any enabled probe
+ * Set flags for enabled probes
  */
-#define PROBE_SELECTED (ENABLED(PROBE_MANUALLY) || ENABLED(FIX_MOUNTED_PROBE) || ENABLED(Z_PROBE_ALLEN_KEY) || HAS_Z_SERVO_ENDSTOP || ENABLED(Z_PROBE_SLED) || ENABLED(SOLENOID_PROBE))
+#define HAS_BED_PROBE (ENABLED(FIX_MOUNTED_PROBE) || ENABLED(Z_PROBE_ALLEN_KEY) || HAS_Z_SERVO_PROBE || ENABLED(Z_PROBE_SLED) || ENABLED(SOLENOID_PROBE) || ENABLED(SENSORLESS_PROBING) || ENABLED(RACK_AND_PINION_PROBE))
+#define PROBE_SELECTED (HAS_BED_PROBE || ENABLED(PROBE_MANUALLY) || ENABLED(MESH_BED_LEVELING))
 
-/**
- * Clear probe pin settings when no probe is selected
- */
-#if !PROBE_SELECTED || ENABLED(PROBE_MANUALLY)
+#if HAS_BED_PROBE
+  #ifndef Z_PROBE_LOW_POINT
+    #define Z_PROBE_LOW_POINT -5
+  #endif
+  #if ENABLED(Z_PROBE_ALLEN_KEY)
+    #define PROBE_TRIGGERED_WHEN_STOWED_TEST // Extra test for Allen Key Probe
+  #endif
+#else
+  // Clear probe pin settings when no probe is selected
   #undef Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
   #undef Z_MIN_PROBE_ENDSTOP
 #endif
 
-#define HAS_SOFTWARE_ENDSTOPS (ENABLED(MIN_SOFTWARE_ENDSTOPS) || ENABLED(MAX_SOFTWARE_ENDSTOPS))
-#define HAS_RESUME_CONTINUE (ENABLED(NEWPANEL) || ENABLED(EMERGENCY_PARSER))
-#define HAS_COLOR_LEDS (ENABLED(BLINKM) || ENABLED(RGB_LED) || ENABLED(RGBW_LED) || ENABLED(PCA9632) || ENABLED(NEOPIXEL_LED))
+#define HOMING_Z_WITH_PROBE (HAS_BED_PROBE && Z_HOME_DIR < 0 && ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN))
 
-#endif // CONDITIONALS_LCD_H
+#ifdef GRID_MAX_POINTS_X
+  #define GRID_MAX_POINTS ((GRID_MAX_POINTS_X) * (GRID_MAX_POINTS_Y))
+#endif
+
+#define HAS_SOFTWARE_ENDSTOPS (ENABLED(MIN_SOFTWARE_ENDSTOPS) || ENABLED(MAX_SOFTWARE_ENDSTOPS))
+#define HAS_RESUME_CONTINUE (ENABLED(EXTENSIBLE_UI) || ENABLED(NEWPANEL) || ENABLED(EMERGENCY_PARSER))
+#define HAS_COLOR_LEDS (ENABLED(BLINKM) || ENABLED(RGB_LED) || ENABLED(RGBW_LED) || ENABLED(PCA9632) || ENABLED(PCA9533) || ENABLED(NEOPIXEL_LED))
+#define HAS_LEDS_OFF_FLAG (ENABLED(PRINTER_EVENT_LEDS) && ENABLED(SDSUPPORT) && HAS_RESUME_CONTINUE)
+#define HAS_PRINT_PROGRESS (ENABLED(SDSUPPORT) || ENABLED(LCD_SET_PROGRESS_MANUALLY))
+#define HAS_SERVICE_INTERVALS (SERVICE_INTERVAL_1 > 0 || SERVICE_INTERVAL_2 > 0 || SERVICE_INTERVAL_3 > 0)
+#define HAS_FILAMENT_SENSOR ENABLED(FILAMENT_RUNOUT_SENSOR)
+
+#define Z_MULTI_STEPPER_DRIVERS (ENABLED(Z_DUAL_STEPPER_DRIVERS) || ENABLED(Z_TRIPLE_STEPPER_DRIVERS))
+#define Z_MULTI_ENDSTOPS (ENABLED(Z_DUAL_ENDSTOPS) || ENABLED(Z_TRIPLE_ENDSTOPS))
+#define HAS_EXTRA_ENDSTOPS (ENABLED(X_DUAL_ENDSTOPS) || ENABLED(Y_DUAL_ENDSTOPS) || Z_MULTI_ENDSTOPS)
+
+#define IS_SCARA     (ENABLED(MORGAN_SCARA) || ENABLED(MAKERARM_SCARA))
+#define IS_KINEMATIC (ENABLED(DELTA) || IS_SCARA)
+#define IS_CARTESIAN !IS_KINEMATIC
+
+#ifndef INVERT_X_DIR
+  #define INVERT_X_DIR false
+#endif
+#ifndef INVERT_Y_DIR
+  #define INVERT_Y_DIR false
+#endif
+#ifndef INVERT_Z_DIR
+  #define INVERT_Z_DIR false
+#endif
+#ifndef INVERT_E_DIR
+  #define INVERT_E_DIR false
+#endif
+
+#if ENABLED(HOST_ACTION_COMMANDS)
+  #ifndef ACTION_ON_PAUSE
+    #define ACTION_ON_PAUSE   "pause"
+  #endif
+  #ifndef ACTION_ON_RESUME
+    #define ACTION_ON_RESUME  "resume"
+  #endif
+  #ifndef ACTION_ON_PAUSED
+    #define ACTION_ON_PAUSED  "paused"
+  #endif
+  #ifndef ACTION_ON_RESUMED
+    #define ACTION_ON_RESUMED "resumed"
+  #endif
+  #ifndef ACTION_ON_CANCEL
+    #define ACTION_ON_CANCEL  "cancel"
+  #endif
+  #if ENABLED(G29_RETRY_AND_RECOVER)
+    #ifndef ACTION_ON_G29_RECOVER
+      #define ACTION_ON_G29_RECOVER "probe_rewipe"
+    #endif
+    #ifndef ACTION_ON_G29_FAILURE
+      #define ACTION_ON_G29_FAILURE "probe_failed"
+    #endif
+  #endif
+#endif

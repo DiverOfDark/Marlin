@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -58,7 +58,7 @@ int finish_incremental_LSF(struct linear_fit_data *lsf) {
   lsf->xzbar = lsf->xzbar / N - lsf->xbar * lsf->zbar;
   const float DD = lsf->x2bar * lsf->y2bar - sq(lsf->xybar);
 
-  if (FABS(DD) <= 1e-10 * (lsf->max_absx + lsf->max_absy))
+  if (ABS(DD) <= 1e-10 * (lsf->max_absx + lsf->max_absy))
     return 1;
 
   lsf->A = (lsf->yzbar * lsf->xybar - lsf->xzbar * lsf->y2bar) / DD;

@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -46,6 +46,10 @@
 #if THERMISTORBED == 20
   #define HEATER_BED_RAW_HI_TEMP 16383
   #define HEATER_BED_RAW_LO_TEMP 0
+#endif
+#if THERMISTORCHAMBER == 20
+  #define HEATER_CHAMBER_RAW_HI_TEMP 16383
+  #define HEATER_CHAMBER_RAW_LO_TEMP 0
 #endif
 const short temptable_20[][2] PROGMEM = {
   { OV(  0),    0 },

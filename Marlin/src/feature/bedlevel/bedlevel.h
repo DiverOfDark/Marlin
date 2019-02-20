@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -19,9 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
-#ifndef __BEDLEVEL_H__
-#define __BEDLEVEL_H__
+#pragma once
 
 #include "../../inc/MarlinConfigPre.h"
 
@@ -67,10 +65,6 @@ void reset_bed_level();
   void _manual_goto_xy(const float &x, const float &y);
 #endif
 
-#if HAS_PROBING_PROCEDURE
-  void out_of_range_error(const char* p_edge);
-#endif
-
 #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
   #define _GET_MESH_X(I) (bilinear_start[X_AXIS] + (I) * bilinear_grid_spacing[X_AXIS])
   #define _GET_MESH_Y(J) (bilinear_start[Y_AXIS] + (J) * bilinear_grid_spacing[Y_AXIS])
@@ -86,8 +80,6 @@ void reset_bed_level();
   #include "mbl/mesh_bed_leveling.h"
 #elif ENABLED(AUTO_BED_LEVELING_UBL)
   #include "ubl/ubl.h"
-#elif HAS_ABL
+#elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
   #include "abl/abl.h"
 #endif
-
-#endif // __BEDLEVEL_H__

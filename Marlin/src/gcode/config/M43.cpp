@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -29,28 +29,32 @@
 #include "../../pins/pinsDebug.h"
 #include "../../module/endstops.h"
 
-#if HAS_Z_SERVO_ENDSTOP
+#if HAS_Z_SERVO_PROBE
   #include "../../module/probe.h"
   #include "../../module/servo.h"
 #endif
 
+#if ENABLED(HOST_PROMPT_SUPPORT)
+  #include "../../feature/host_actions.h"
+#endif
+
 inline void toggle_pins() {
-  const bool I_flag = parser.boolval('I');
+  const bool ignore_protection = parser.boolval('I');
   const int repeat = parser.intval('R', 1),
             start = PARSED_PIN_INDEX('S', 0),
-            end = PARSED_PIN_INDEX('E', NUM_DIGITAL_PINS - 1),
+            end = PARSED_PIN_INDEX('L', NUM_DIGITAL_PINS - 1),
             wait = parser.intval('W', 500);
 
   for (uint8_t i = start; i <= end; i++) {
     pin_t pin = GET_PIN_MAP_PIN(i);
-    //report_pin_state_extended(pin, I_flag, false);
+    //report_pin_state_extended(pin, ignore_protection, false);
     if (!VALID_PIN(pin)) continue;
-    if (!I_flag && pin_is_protected(pin)) {
-      report_pin_state_extended(pin, I_flag, true, "Untouched ");
+    if (!ignore_protection && pin_is_protected(pin)) {
+      report_pin_state_extended(pin, ignore_protection, true, "Untouched ");
       SERIAL_EOL();
     }
     else {
-      report_pin_state_extended(pin, I_flag, true, "Pulsing   ");
+      report_pin_state_extended(pin, ignore_protection, true, "Pulsing   ");
       #if AVR_AT90USB1286_FAMILY // Teensy IDEs don't know about these pins so must use FASTIO
         if (pin == TEENSY_E2) {
           SET_OUTPUT(TEENSY_E2);
@@ -89,22 +93,20 @@ inline void toggle_pins() {
 inline void servo_probe_test() {
   #if !(NUM_SERVOS > 0 && HAS_SERVO_0)
 
-    SERIAL_ERROR_START();
-    SERIAL_ERRORLNPGM("SERVO not setup");
+    SERIAL_ERROR_MSG("SERVO not setup");
 
-  #elif !HAS_Z_SERVO_ENDSTOP
+  #elif !HAS_Z_SERVO_PROBE
 
-    SERIAL_ERROR_START();
-    SERIAL_ERRORLNPGM("Z_ENDSTOP_SERVO_NR not setup");
+    SERIAL_ERROR_MSG("Z_PROBE_SERVO_NR not setup");
 
-  #else // HAS_Z_SERVO_ENDSTOP
+  #else // HAS_Z_SERVO_PROBE
 
-    const uint8_t probe_index = parser.byteval('P', Z_ENDSTOP_SERVO_NR);
+    const uint8_t probe_index = parser.byteval('P', Z_PROBE_SERVO_NR);
 
-    SERIAL_PROTOCOLLNPGM("Servo probe test");
-    SERIAL_PROTOCOLLNPAIR(".  using index:  ", probe_index);
-    SERIAL_PROTOCOLLNPAIR(".  deploy angle: ", z_servo_angle[0]);
-    SERIAL_PROTOCOLLNPAIR(".  stow angle:   ", z_servo_angle[1]);
+    SERIAL_ECHOLNPGM("Servo probe test");
+    SERIAL_ECHOLNPAIR(".  using index:  ", probe_index);
+    SERIAL_ECHOLNPAIR(".  deploy angle: ", servo_angles[probe_index][0]);
+    SERIAL_ECHOLNPAIR(".  stow angle:   ", servo_angles[probe_index][1]);
 
     bool probe_inverting;
 
@@ -112,14 +114,14 @@ inline void servo_probe_test() {
 
       #define PROBE_TEST_PIN Z_MIN_PIN
 
-      SERIAL_PROTOCOLLNPAIR(". probe uses Z_MIN pin: ", PROBE_TEST_PIN);
-      SERIAL_PROTOCOLLNPGM(". uses Z_MIN_ENDSTOP_INVERTING (ignores Z_MIN_PROBE_ENDSTOP_INVERTING)");
-      SERIAL_PROTOCOLPGM(". Z_MIN_ENDSTOP_INVERTING: ");
+      SERIAL_ECHOLNPAIR(". probe uses Z_MIN pin: ", PROBE_TEST_PIN);
+      SERIAL_ECHOLNPGM(". uses Z_MIN_ENDSTOP_INVERTING (ignores Z_MIN_PROBE_ENDSTOP_INVERTING)");
+      SERIAL_ECHOPGM(". Z_MIN_ENDSTOP_INVERTING: ");
 
       #if Z_MIN_ENDSTOP_INVERTING
-        SERIAL_PROTOCOLLNPGM("true");
+        SERIAL_ECHOLNPGM("true");
       #else
-        SERIAL_PROTOCOLLNPGM("false");
+        SERIAL_ECHOLNPGM("false");
       #endif
 
       probe_inverting = Z_MIN_ENDSTOP_INVERTING;
@@ -127,54 +129,52 @@ inline void servo_probe_test() {
     #elif ENABLED(Z_MIN_PROBE_ENDSTOP)
 
       #define PROBE_TEST_PIN Z_MIN_PROBE_PIN
-      SERIAL_PROTOCOLLNPAIR(". probe uses Z_MIN_PROBE_PIN: ", PROBE_TEST_PIN);
-      SERIAL_PROTOCOLLNPGM(". uses Z_MIN_PROBE_ENDSTOP_INVERTING (ignores Z_MIN_ENDSTOP_INVERTING)");
-      SERIAL_PROTOCOLPGM(". Z_MIN_PROBE_ENDSTOP_INVERTING: ");
+      SERIAL_ECHOLNPAIR(". probe uses Z_MIN_PROBE_PIN: ", PROBE_TEST_PIN);
+      SERIAL_ECHOLNPGM(". uses Z_MIN_PROBE_ENDSTOP_INVERTING (ignores Z_MIN_ENDSTOP_INVERTING)");
+      SERIAL_ECHOPGM(". Z_MIN_PROBE_ENDSTOP_INVERTING: ");
 
       #if Z_MIN_PROBE_ENDSTOP_INVERTING
-        SERIAL_PROTOCOLLNPGM("true");
+        SERIAL_ECHOLNPGM("true");
       #else
-        SERIAL_PROTOCOLLNPGM("false");
+        SERIAL_ECHOLNPGM("false");
       #endif
 
       probe_inverting = Z_MIN_PROBE_ENDSTOP_INVERTING;
 
     #endif
 
-    SERIAL_PROTOCOLLNPGM(". deploy & stow 4 times");
+    SERIAL_ECHOLNPGM(". deploy & stow 4 times");
     SET_INPUT_PULLUP(PROBE_TEST_PIN);
     uint8_t i = 0;
     bool deploy_state, stow_state;
     do {
-      MOVE_SERVO(probe_index, z_servo_angle[0]); //deploy
+      MOVE_SERVO(probe_index, servo_angles[Z_PROBE_SERVO_NR][0]); // Deploy
       safe_delay(500);
       deploy_state = READ(PROBE_TEST_PIN);
-      MOVE_SERVO(probe_index, z_servo_angle[1]); //stow
+      MOVE_SERVO(probe_index, servo_angles[Z_PROBE_SERVO_NR][1]); // Stow
       safe_delay(500);
       stow_state = READ(PROBE_TEST_PIN);
     } while (++i < 4);
-    if (probe_inverting != deploy_state) SERIAL_PROTOCOLLNPGM("WARNING - INVERTING setting probably backwards");
-
-    gcode.refresh_cmd_timeout();
+    if (probe_inverting != deploy_state) SERIAL_ECHOLNPGM("WARNING - INVERTING setting probably backwards");
 
     if (deploy_state != stow_state) {
-      SERIAL_PROTOCOLLNPGM("BLTouch clone detected");
+      SERIAL_ECHOLNPGM("BLTouch clone detected");
       if (deploy_state) {
-        SERIAL_PROTOCOLLNPGM(".  DEPLOYED state: HIGH (logic 1)");
-        SERIAL_PROTOCOLLNPGM(".  STOWED (triggered) state: LOW (logic 0)");
+        SERIAL_ECHOLNPGM(".  DEPLOYED state: HIGH (logic 1)");
+        SERIAL_ECHOLNPGM(".  STOWED (triggered) state: LOW (logic 0)");
       }
       else {
-        SERIAL_PROTOCOLLNPGM(".  DEPLOYED state: LOW (logic 0)");
-        SERIAL_PROTOCOLLNPGM(".  STOWED (triggered) state: HIGH (logic 1)");
+        SERIAL_ECHOLNPGM(".  DEPLOYED state: LOW (logic 0)");
+        SERIAL_ECHOLNPGM(".  STOWED (triggered) state: HIGH (logic 1)");
       }
       #if ENABLED(BLTOUCH)
-        SERIAL_PROTOCOLLNPGM("ERROR: BLTOUCH enabled - set this device up as a Z Servo Probe with inverting as true.");
+        SERIAL_ECHOLNPGM("ERROR: BLTOUCH enabled - set this device up as a Z Servo Probe with inverting as true.");
       #endif
     }
     else {                                           // measure active signal length
-      MOVE_SERVO(probe_index, z_servo_angle[0]);     // deploy
+      MOVE_SERVO(probe_index, servo_angles[Z_PROBE_SERVO_NR][0]); // Deploy
       safe_delay(500);
-      SERIAL_PROTOCOLLNPGM("please trigger probe");
+      SERIAL_ECHOLNPGM("please trigger probe");
       uint16_t probe_counter = 0;
 
       // Allow 30 seconds max for operator to trigger probe
@@ -182,8 +182,7 @@ inline void servo_probe_test() {
 
         safe_delay(2);
 
-        if (0 == j % (500 * 1)) // keep cmd_timeout happy
-          gcode.refresh_cmd_timeout();
+        if (0 == j % (500 * 1)) gcode.reset_stepper_timeout(); // Keep steppers powered
 
         if (deploy_state != READ(PROBE_TEST_PIN)) { // probe triggered
 
@@ -191,19 +190,19 @@ inline void servo_probe_test() {
             safe_delay(2);
 
           if (probe_counter == 50)
-            SERIAL_PROTOCOLLNPGM("Z Servo Probe detected"); // >= 100mS active time
+            SERIAL_ECHOLNPGM("Z Servo Probe detected"); // >= 100mS active time
           else if (probe_counter >= 2)
-            SERIAL_PROTOCOLLNPAIR("BLTouch compatible probe detected - pulse width (+/- 4mS): ", probe_counter * 2); // allow 4 - 100mS pulse
+            SERIAL_ECHOLNPAIR("BLTouch compatible probe detected - pulse width (+/- 4mS): ", probe_counter * 2); // allow 4 - 100mS pulse
           else
-            SERIAL_PROTOCOLLNPGM("noise detected - please re-run test"); // less than 2mS pulse
+            SERIAL_ECHOLNPGM("noise detected - please re-run test"); // less than 2mS pulse
 
-          MOVE_SERVO(probe_index, z_servo_angle[1]); //stow
+          MOVE_SERVO(probe_index, servo_angles[Z_PROBE_SERVO_NR][1]); // Stow
 
         }  // pulse detected
 
       } // for loop waiting for trigger
 
-      if (probe_counter == 0) SERIAL_PROTOCOLLNPGM("trigger not detected");
+      if (probe_counter == 0) SERIAL_ECHOLNPGM("trigger not detected");
 
     } // measure active signal length
 
@@ -248,9 +247,9 @@ void GcodeSuite::M43() {
   // Enable or disable endstop monitoring
   if (parser.seen('E')) {
     endstops.monitor_flag = parser.value_bool();
-    SERIAL_PROTOCOLPGM("endstop monitor ");
+    SERIAL_ECHOPGM("endstop monitor ");
     serialprintPGM(endstops.monitor_flag ? PSTR("en") : PSTR("dis"));
-    SERIAL_PROTOCOLLNPGM("abled");
+    SERIAL_ECHOLNPGM("abled");
     return;
   }
 
@@ -269,7 +268,7 @@ void GcodeSuite::M43() {
 
   // Watch until click, M108, or reset
   if (parser.boolval('W')) {
-    SERIAL_PROTOCOLLNPGM("Watching pins");
+    SERIAL_ECHOLNPGM("Watching pins");
 
     #ifdef ARDUINO_ARCH_SAM
       NOLESS(first_pin, 2);  // don't hijack the UART pins
@@ -278,7 +277,7 @@ void GcodeSuite::M43() {
     for (uint8_t i = first_pin; i <= last_pin; i++) {
       pin_t pin = GET_PIN_MAP_PIN(i);
       if (!VALID_PIN(pin)) continue;
-      if (pin_is_protected(pin) && !ignore_protection) continue;
+      if (!ignore_protection && pin_is_protected(pin)) continue;
       pinMode(pin, INPUT_PULLUP);
       delay(1);
       /*
@@ -291,6 +290,9 @@ void GcodeSuite::M43() {
 
     #if HAS_RESUME_CONTINUE
       wait_for_user = true;
+      #if ENABLED(HOST_PROMPT_SUPPORT)
+        host_prompt_do(PROMPT_USER_CONTINUE, PSTR("M43 Wait Called"), PSTR("Continue"));
+      #endif
       KEEPALIVE_STATE(PAUSED_FOR_USER);
     #endif
 
@@ -298,7 +300,7 @@ void GcodeSuite::M43() {
       for (uint8_t i = first_pin; i <= last_pin; i++) {
         pin_t pin = GET_PIN_MAP_PIN(i);
         if (!VALID_PIN(pin)) continue;
-        if (pin_is_protected(pin) && !ignore_protection) continue;
+        if (!ignore_protection && pin_is_protected(pin)) continue;
         const byte val =
           /*
             IS_ANALOG(pin)

@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -50,6 +50,12 @@
 #define BTN_EN2         11
 #define BTN_ENC         26
 
-#define ST7920_DELAY_1 DELAY_0_NOP
-#define ST7920_DELAY_2 DELAY_2_NOP
-#define ST7920_DELAY_3 DELAY_0_NOP
+#ifndef ST7920_DELAY_1
+  #define ST7920_DELAY_1 DELAY_NS(0)
+#endif
+#ifndef ST7920_DELAY_2
+  #define ST7920_DELAY_2 DELAY_NS(125)
+#endif
+#ifndef ST7920_DELAY_3
+  #define ST7920_DELAY_3 DELAY_NS(0)
+#endif

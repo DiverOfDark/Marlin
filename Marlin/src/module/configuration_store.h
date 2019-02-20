@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -19,13 +19,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
-#ifndef CONFIGURATION_STORE_H
-#define CONFIGURATION_STORE_H
+#pragma once
 
 #include "../inc/MarlinConfig.h"
 
+#if ENABLED(EEPROM_SETTINGS)
+  #include "../HAL/shared/persistent_store_api.h"
+#endif
+
 #define ADD_PORT_ARG ENABLED(EEPROM_CHITCHAT) && NUM_SERIAL > 1
+
+#if ADD_PORT_ARG
+  #define PORTINIT_SOLO    const int8_t port=-1
+  #define PORTINIT_AFTER  ,const int8_t port=-1
+#else
+  #define PORTINIT_SOLO
+  #define PORTINIT_AFTER
+#endif
 
 class MarlinSettings {
   public:
@@ -33,45 +43,35 @@ class MarlinSettings {
 
     static uint16_t datasize();
 
-    static void reset(
-      #if ADD_PORT_ARG
-        const int8_t port=-1
-      #endif
-    );
-    static bool save(
-      #if ADD_PORT_ARG
-        const int8_t port=-1
-      #endif
-    );   // Return 'true' if data was saved
+    static void reset(PORTINIT_SOLO);
+    static bool save(PORTINIT_SOLO);    // Return 'true' if data was saved
 
     FORCE_INLINE static bool init_eeprom() {
-      bool success = true;
       reset();
       #if ENABLED(EEPROM_SETTINGS)
-        success = save();
+        const bool success = save();
         #if ENABLED(EEPROM_CHITCHAT)
           if (success) report();
         #endif
+        return success;
+      #else
+        return true;
       #endif
-      return success;
     }
 
+    #if ENABLED(SD_FIRMWARE_UPDATE)
+      static bool sd_update_status();                       // True if the SD-Firmware-Update EEPROM flag is set
+      static bool set_sd_update_status(const bool enable);  // Return 'true' after EEPROM is set (-> always true)
+    #endif
+
     #if ENABLED(EEPROM_SETTINGS)
-      static bool load(
-        #if ADD_PORT_ARG
-          const int8_t port=-1
-        #endif
-      );     // Return 'true' if data was loaded ok
-      static bool validate(
-        #if ADD_PORT_ARG
-          const int8_t port=-1
-        #endif
-      ); // Return 'true' if EEPROM data is ok
+      static bool load(PORTINIT_SOLO);      // Return 'true' if data was loaded ok
+      static bool validate(PORTINIT_SOLO);  // Return 'true' if EEPROM data is ok
 
       #if ENABLED(AUTO_BED_LEVELING_UBL) // Eventually make these available if any leveling system
                                          // That can store is enabled
-        static int16_t meshes_start_index();
-        FORCE_INLINE static int16_t meshes_end_index() { return meshes_end; }
+        static uint16_t meshes_start_index();
+        FORCE_INLINE static uint16_t meshes_end_index() { return meshes_end; }
         static uint16_t calc_num_meshes();
         static int mesh_slot_offset(const int8_t slot);
         static void store_mesh(const int8_t slot);
@@ -103,26 +103,18 @@ class MarlinSettings {
 
       static bool eeprom_error, validating;
 
-      #if ENABLED(AUTO_BED_LEVELING_UBL) // Eventually make these available if any leveling system
-                                         // That can store is enabled
-        static constexpr int16_t meshes_end = E2END - 128; // 128 is a placeholder for the size of the MAT; the MAT will always
-                                                           // live at the very end of the eeprom
-
+      #if ENABLED(AUTO_BED_LEVELING_UBL)  // Eventually make these available if any leveling system
+                                          // That can store is enabled
+        static const uint16_t meshes_end; // 128 is a placeholder for the size of the MAT; the MAT will always
+                                          // live at the very end of the eeprom
       #endif
 
-      static bool _load(
-        #if ADD_PORT_ARG
-          const int8_t port=-1
-        #endif
-      );
-      static bool size_error(const uint16_t size
-        #if ADD_PORT_ARG
-          , const int8_t port=-1
-        #endif
-      );
+      static bool _load(PORTINIT_SOLO);
+      static bool size_error(const uint16_t size PORTINIT_AFTER);
     #endif
 };
 
 extern MarlinSettings settings;
 
-#endif // CONFIGURATION_STORE_H
+#undef PORTINIT_SOLO
+#undef PORTINIT_AFTER
