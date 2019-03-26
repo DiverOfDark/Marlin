@@ -2891,8 +2891,7 @@ void Planner::refresh_positioning() {
 }
 
 void Planner::UpdateFan(){
-  uint8_t axis_active[NUM_AXIS] = { 0 },
-          tail_fan_speed[FAN_COUNT];
+  uint8_t tail_fan_speed[FAN_COUNT];
 
   if (has_blocks_queued()) {
     #if FAN_COUNT > 0
