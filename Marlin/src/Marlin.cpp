@@ -650,12 +650,7 @@ void manage_inactivity(const bool ignore_stepper_queue/*=false*/) {
     L6470.monitor_driver();
   #endif
 
-  // Limit check_axes_activity frequency to 10Hz
-  static millis_t next_check_axes_ms = 0;
-  if (ELAPSED(ms, next_check_axes_ms)) {
-    planner.check_axes_activity();
-    next_check_axes_ms = ms + 100UL;
-  }
+  planner.check_axes_activity();
 }
 
 /**

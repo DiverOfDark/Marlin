@@ -41,8 +41,8 @@
 //
 // Servos
 //
-#define SERVO0_PIN          5
-#define SERVO1_PIN          3
+#define SERVO0_PIN          -1
+#define SERVO1_PIN          -1
 
 //
 // Limit Switches
@@ -129,7 +129,7 @@
 #define HEATER_BED_PIN      7  // BED H1
 
 #define FAN_PIN             9
-#define FAN1_PIN            3
+#define FAN1_PIN            8
 
 //
 // Temperature Sensors
@@ -137,12 +137,12 @@
 #define TEMP_0_PIN          0  // ANALOG A0
 #define TEMP_1_PIN          1  // ANALOG A1
 #define TEMP_2_PIN          2  // ANALOG A2
-#define TEMP_3_PIN          3  // ANALOG A2
+#define TEMP_3_PIN          -1  // ANALOG A2
 #define TEMP_BED_PIN        4  // ANALOG A3
 //Thermocouple Use Analog Pins
 #if ENABLED(VER_WITH_THERMOCOUPLE) // If Nead, define is in Configuration.h
-  #define TEMP_4_PIN        5  // A5
-  #define TEMP_5_PIN        6  // A6 (Marlin 2.0 not support)
+  #define TEMP_4_PIN        -1  // A5
+  #define TEMP_5_PIN        -1  // A6 (Marlin 2.0 not support)
 #endif
 
 // SPI for Max6675 or Max31855 Thermocouple
