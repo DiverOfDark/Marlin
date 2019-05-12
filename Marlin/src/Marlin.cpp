@@ -225,25 +225,9 @@ void setup_powerhold() {
   #endif
 
   #if HAS_POWER_SWITCH
-    #if !ENABLED(PS_DEFAULT_OFF)
-      PSU_OFF();
-      safe_delay(500);
-    #endif
-  #endif
-
-  ui.init_lcd();
-  ui.reset_status();
-  ui.show_bootscreen();
-
-  #if HAS_POWER_SWITCH
     #if ENABLED(PS_DEFAULT_OFF)
       powersupply_on = true;  PSU_OFF();
     #else
-      safe_delay(1000);
-      powersupply_on = false; PSU_ON();
-      safe_delay(1000);
-      powersupply_on = true;  PSU_OFF();
-      safe_delay(1000);
       powersupply_on = false; PSU_ON();
     #endif
   #endif
@@ -658,16 +642,14 @@ void manage_inactivity(const bool ignore_stepper_queue/*=false*/) {
   #endif
 
   planner.check_axes_activity();
-
-  /*
+/*
   // Limit check_axes_activity frequency to 10Hz
   static millis_t next_check_axes_ms = 0;
   if (ELAPSED(ms, next_check_axes_ms)) {
     planner.check_axes_activity();
     next_check_axes_ms = ms + 100UL;
   }
-  */
-
+*/
   #if PIN_EXISTS(FET_SAFETY)
     static millis_t FET_next;
     if (ELAPSED(ms, FET_next)) {

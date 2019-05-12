@@ -2837,53 +2837,6 @@ void Planner::refresh_positioning() {
   reset_acceleration_rates();
 }
 
-void Planner::UpdateFan(){
-  uint8_t tail_fan_speed[FAN_COUNT];
-
-  if (has_blocks_queued()) {
-    #if FAN_COUNT > 0
-      FANS_LOOP(i)
-        tail_fan_speed[i] = (block_buffer[block_buffer_tail].fan_speed[i] * uint16_t(thermalManager.fan_speed_scaler[i])) >> 7;
-    #endif
-  } else {
-    #if FAN_COUNT > 0
-      FANS_LOOP(i)
-        tail_fan_speed[i] = (thermalManager.fan_speed[i] * uint16_t(thermalManager.fan_speed_scaler[i])) >> 7;
-    #endif
-  }
-
-  #if FAN_COUNT > 0
-    #if FAN_MIN_PWM != 0 || FAN_MAX_PWM != 255
-      #define CALC_FAN_SPEED(f) (tail_fan_speed[f] ? map(tail_fan_speed[f], 1, 255, FAN_MIN_PWM, FAN_MAX_PWM) : 0)
-    #else
-      #define CALC_FAN_SPEED(f) tail_fan_speed[f]
-    #endif
-
-    #if ENABLED(FAN_SOFT_PWM)
-      #if HAS_FAN0
-        thermalManager.soft_pwm_amount_fan[0] = CALC_FAN_SPEED(0);
-      #endif
-      #if HAS_FAN1
-        thermalManager.soft_pwm_amount_fan[1] = CALC_FAN_SPEED(1);
-      #endif
-      #if HAS_FAN2
-        thermalManager.soft_pwm_amount_fan[2] = CALC_FAN_SPEED(2);
-      #endif
-    #else
-      #if HAS_FAN0
-        analogWrite(FAN_PIN, CALC_FAN_SPEED(0));
-      #endif
-      #if HAS_FAN1
-        analogWrite(FAN1_PIN, CALC_FAN_SPEED(1));
-      #endif
-      #if HAS_FAN2
-        analogWrite(FAN2_PIN, CALC_FAN_SPEED(2));
-      #endif
-    #endif
-
-  #endif // FAN_COUNT > 0
-}
-
 #if ENABLED(AUTOTEMP)
 
   void Planner::autotemp_M104_M109() {

@@ -66,8 +66,6 @@ void GcodeSuite::M106() {
 
     thermalManager.set_fan_speed(p, s);
   }
-
-  Planner::buffer_sync_block();
 }
 
 /**
